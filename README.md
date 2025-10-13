@@ -1,6 +1,6 @@
 # PawFect Match 🐾
 
-A full-stack pet adoption platform that helps users find their perfect furry companions.
+A full-stack pet adoption platform that helps users find their perfect furry companions. Built with Vue.js frontend and Flask Python backend with Supabase database.
 
 ![PawFect Match](https://cdn-icons-png.flaticon.com/512/616/616430.png)
 
@@ -11,7 +11,7 @@ A full-stack pet adoption platform that helps users find their perfect furry com
 - **Responsive Design** - Mobile-first design that works on all devices
 - **Real-time Search** - Instant search with debounced input
 - **Lazy Loading** - Optimized image loading with placeholder system
-- **RESTful API** - Clean backend API with Supabase database
+- **RESTful API** - Clean Flask backend API with Supabase database
 
 ## 🛠 Tech Stack
 
@@ -21,9 +21,10 @@ A full-stack pet adoption platform that helps users find their perfect furry com
 - Axios for API calls
 
 **Backend:**
-- Node.js + Express.js
-- Supabase (PostgreSQL)
-- CORS enabled
+- **Flask** (Python) - Web framework
+- **Supabase** (PostgreSQL) - Database
+- **Requests** - HTTP library for API calls
+- **Flask-CORS** - Cross-Origin Resource Sharing
 
 **APIs:**
 - The Dog API & The Cat API for placeholder images
@@ -31,11 +32,11 @@ A full-stack pet adoption platform that helps users find their perfect furry com
 ## 📦 Installation
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+- Python 3.8 or higher
+- Node.js (v16 or higher) for frontend
 - Supabase account
 
-### Backend Setup
+### Backend Setup (Flask Python)
 
 1. Navigate to backend directory:
 ```bash
