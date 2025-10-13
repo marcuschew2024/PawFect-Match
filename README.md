@@ -41,3 +41,20 @@ A full-stack pet adoption platform that helps users find their perfect furry com
 1. Navigate to backend directory:
 ```bash
 cd backend
+
+pip install -r requirements.txt
+
+cp .env.example .env
+
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+FLASK_ENV=development
+
+python app.py
+
+### Frontend Setup 
+cd frontend
+
+npm install
+
+npm run dev
