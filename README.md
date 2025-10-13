@@ -46,13 +46,9 @@ pip install -r requirements.txt
 
 cp .env.example .env
 
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-FLASK_ENV=development
-
 python app.py
 
-### Frontend Setup 
+#### Frontend Setup
 cd frontend
 
 npm install
