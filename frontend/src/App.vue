@@ -21,8 +21,36 @@
             <li class="nav-item">
               <router-link to="/pets" class="nav-link">Pet Listing</router-link>
             </li>
-            <li class="nav-item">
-              <router-link to="/add-adoption" class="nav-link">Add Adoption</router-link>
+            <li class="nav-item" v-if="isAuthenticated">
+              <router-link to="/add-pet" class="nav-link">List a Pet</router-link>
+            </li>
+            
+            
+            <!-- Authentication Section -->
+            <li class="nav-item dropdown" v-if="!isAuthenticated">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person me-1"></i>Account
+              </a>
+              <ul class="dropdown-menu">
+                <li><router-link to="/login" class="dropdown-item">Login</router-link></li>
+                <li><router-link to="/signup" class="dropdown-item">Sign Up</router-link></li>
+              </ul>
+            </li>
+            
+            <li class="nav-item dropdown" v-else>
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle me-1"></i>{{ user?.full_name || 'User' }}
+              </a>
+              <ul class="dropdown-menu">
+                <li><router-link to="/profile" class="dropdown-item">
+                  <i class="bi bi-person me-2"></i>My Profile
+                </router-link></li>
+                <li><router-link to="/favorites" class="dropdown-item">
+                  <i class="bi bi-heart me-2"></i>My Favorites
+                </router-link></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" @click="handleLogout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+              </ul>
             </li>
           </ul>
         </div>
@@ -31,7 +59,7 @@
 
     <!-- Main Content -->
     <main>
-      <router-view/>
+      <router-view @auth-change="checkAuth"/>
     </main>
 
     <!-- Footer -->
@@ -45,7 +73,7 @@
               <li><router-link to="/">Home</router-link></li>
               <li><router-link to="/about">About Us</router-link></li>
               <li><router-link to="/pets">Pet Listing</router-link></li>
-              <li><router-link to="/add-adoption">Add Adoption</router-link></li>
+              <li><router-link to="/add-pet">List a Pet</router-link></li>
             </ul>
           </div>
 
@@ -82,8 +110,45 @@
 
 <script>
 export default {
-  name: 'App'
+  name: 'App',
+  data() {
+    return {
+      isAuthenticated: false,
+      user: null
+    }
+  },
+  mounted() {
+    this.checkAuth();
+  },
+  methods: {
+    checkAuth() {
+      const token = localStorage.getItem('authToken');
+      const userData = localStorage.getItem('user');
+      
+      this.isAuthenticated = !!token;
+      if (userData) {
+        try {
+          this.user = JSON.parse(userData);
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+          this.user = null;
+        }
+      } else {
+        this.user = null;
+      }
+      
+      console.log('Auth check:', { isAuthenticated: this.isAuthenticated, user: this.user });
+    },
+    handleLogout() {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      this.isAuthenticated = false;
+      this.user = null;
+      this.$router.push('/');
+    }
+  }
 }
+
 </script>
 
 <style>
