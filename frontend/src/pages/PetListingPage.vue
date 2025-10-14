@@ -148,13 +148,14 @@ export default {
   },
   methods: {
     async initializePage() {
-      // Start loading breeds in background
-      this.loadAllBreeds();
+      // Load breeds first, then fetch pets
+      await this.loadAllBreeds();
       await this.fetchPets();
     },
 
     async loadAllBreeds() {
       try {
+        console.log('Loading all breed data...');
         const [dogResponse, catResponse] = await Promise.all([
           fetch("https://api.thedogapi.com/v1/breeds", {
             headers: { "x-api-key": DOG_API_KEY }
@@ -166,7 +167,7 @@ export default {
 
         this.allDogBreeds = await dogResponse.json();
         this.allCatBreeds = await catResponse.json();
-        console.log('Breeds loaded successfully');
+        console.log(`Loaded ${this.allDogBreeds.length} dog breeds and ${this.allCatBreeds.length} cat breeds`);
       } catch (error) {
         console.error("Error fetching breed lists:", error);
       }
@@ -174,25 +175,37 @@ export default {
 
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
-      if (!breeds.length || !breedName) return null;
+      if (!breeds.length || !breedName) {
+        console.log(`No breeds loaded yet or no breed name for type: ${type}`);
+        return null;
+      }
 
       const normalized = breedName.trim().toLowerCase();
+      console.log(`Looking for breed: "${normalized}" in ${type} breeds`);
 
       // Try exact match first
       let breed = breeds.find(b => b.name.toLowerCase() === normalized);
-      if (breed) return breed.id;
+      if (breed) {
+        console.log(`Exact match found: ${breed.name} (ID: ${breed.id})`);
+        return breed.id;
+      }
 
-      // Try partial match (only if exact fails)
-      breed = breeds.find(b => normalized.includes(b.name.toLowerCase()) || b.name.toLowerCase().includes(normalized));
-      if (breed) return breed.id;
+      // Try partial match - breed name contains search term
+      breed = breeds.find(b => b.name.toLowerCase().includes(normalized));
+      if (breed) {
+        console.log(`Partial match found: ${breed.name} (ID: ${breed.id})`);
+        return breed.id;
+      }
 
-      // Try handling common format differences (e.g., "Siberian Husky" vs "Husky, Siberian")
-      const simplified = normalized.replace(/[^a-z\s]/g, "").split(" ").sort().join(" ");
-      breed = breeds.find(b => {
-        const breedSimplified = b.name.toLowerCase().replace(/[^a-z\s]/g, "").split(" ").sort().join(" ");
-        return breedSimplified === simplified;
-      });
-      return breed ? breed.id : null;
+      // Try reverse - search term contains breed name
+      breed = breeds.find(b => normalized.includes(b.name.toLowerCase()));
+      if (breed) {
+        console.log(`Reverse match found: ${breed.name} (ID: ${breed.id})`);
+        return breed.id;
+      }
+
+      console.log(`No match found for breed: ${breedName}`);
+      return null;
     },
 
     async fetchPetImage(pet) {
@@ -218,6 +231,9 @@ export default {
 
         if (breedId) {
           params.append("breed_ids", breedId);
+          console.log(`Searching with breed_id: ${breedId}`);
+        } else {
+          console.log(`No breed ID found, searching without breed filter`);
         }
 
         const response = await fetch(`${apiUrl}?${params}`, {
@@ -229,15 +245,15 @@ export default {
         }
 
         const data = await response.json();
-        console.log('API response:', data);
+        console.log(`API response for ${pet.name}:`, data);
 
         if (data && data.length > 0 && data[0].url) {
           const imageUrl = data[0].url;
           this.imageCache.set(cacheKey, imageUrl);
-          console.log(`Successfully fetched image for ${pet.breed}:`, imageUrl);
+          console.log(`Successfully fetched image for ${pet.name} (${pet.breed}):`, imageUrl);
           return imageUrl;
         } else {
-          console.log(`No image found for ${pet.breed}`);
+          console.log(`No image found for ${pet.name} (${pet.breed})`);
           return "";
         }
 
@@ -309,37 +325,36 @@ export default {
       const petsNeedingImages = pets.filter(pet => pet.placeholderImage);
       console.log(`Fetching API images for ${petsNeedingImages.length} pets`);
 
-      // Process in small batches to avoid overwhelming the API
-      const batchSize = 3;
-      for (let i = 0; i < petsNeedingImages.length; i += batchSize) {
-        const batch = petsNeedingImages.slice(i, i + batchSize);
-
-        const promises = batch.map(async (pet) => {
-          try {
-            const apiImage = await this.fetchPetImage(pet);
-            if (apiImage) {
-              console.log(`Updating ${pet.name} with API image:`, apiImage);
-              // Update the pet's display image
-              pet.displayImage = apiImage;
-              pet.image = apiImage; // Also update the original image field
-
-              // Force Vue reactivity by reassigning the array
-              this.pets = [...this.pets];
-              this.filteredPets = [...this.filteredPets];
-            } else {
-              console.log(`No API image found for ${pet.name}, keeping placeholder`);
+      // Process each pet individually to ensure correct image assignment
+      for (let pet of petsNeedingImages) {
+        try {
+          const apiImage = await this.fetchPetImage(pet);
+          if (apiImage) {
+            console.log(`Updating ${pet.name} (${pet.breed}) with API image:`, apiImage);
+            // Find the pet in both arrays by ID and update
+            const petInMain = this.pets.find(p => p.id === pet.id);
+            const petInFiltered = this.filteredPets.find(p => p.id === pet.id);
+            
+            if (petInMain) {
+              petInMain.displayImage = apiImage;
+              petInMain.image = apiImage;
             }
-          } catch (error) {
-            console.error(`Failed to fetch API image for ${pet.name}:`, error);
+            if (petInFiltered) {
+              petInFiltered.displayImage = apiImage;
+              petInFiltered.image = apiImage;
+            }
+            
+            // Trigger Vue reactivity
+            this.$forceUpdate();
+          } else {
+            console.log(`No API image found for ${pet.name} (${pet.breed}), keeping placeholder`);
           }
-        });
-
-        await Promise.allSettled(promises);
-
-        // Small delay between batches to be nice to the API
-        if (i + batchSize < petsNeedingImages.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(`Failed to fetch API image for ${pet.name}:`, error);
         }
+        
+        // Small delay between requests to be nice to the API
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       console.log('Finished fetching all API images');
