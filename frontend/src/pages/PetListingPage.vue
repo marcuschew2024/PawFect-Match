@@ -163,7 +163,7 @@
             <p class="card-text personality">"{{ pet.personality }}"</p>
           </div>
 
-          <!-- Replace the current adoption button section in your PetListingPage.vue -->
+          <!-- Replace current adoption button section in PetListingPage.vue -->
           <div class="card-footer bg-transparent">
             <div class="d-grid gap-2">
               <!-- View More Button -->
@@ -171,7 +171,7 @@
                 <i class="bi bi-eye me-1"></i>View More
               </button>
 
-              <!-- Adoption Button - FIXED VERSION -->
+              <!-- Adoption Button -->
               <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
                 <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
               </button>
