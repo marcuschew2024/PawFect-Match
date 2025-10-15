@@ -477,47 +477,17 @@ export default {
       }
     },
 
-    //NEW/new API code 
+  
+    // old API code 
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
       if (!breeds.length) return null;
-
-      const normalizedBreedName = breedName.toLowerCase().trim();
-
-      // Try exact match first
-      let breed = breeds.find(b =>
-        b.name.toLowerCase() === normalizedBreedName
+      const breed = breeds.find(b => 
+        b.name.toLowerCase().includes(breedName.toLowerCase()) ||
+        breedName.toLowerCase().includes(b.name.toLowerCase())
       );
-
-      // If no exact match, try partial match but be more strict
-      if (!breed) {
-        breed = breeds.find(b => {
-          const apiBreedName = b.name.toLowerCase();
-          return (apiBreedName.includes(normalizedBreedName) ||
-            normalizedBreedName.includes(apiBreedName)) &&
-            Math.abs(apiBreedName.length - normalizedBreedName.length) < 10;
-        });
-      }
-
-      if (breed) {
-        console.log(`✓ Matched "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
-      } else {
-        console.log(`✗ No breed match for "${breedName}"`);
-      }
-
       return breed ? breed.id : null;
     },
-
-    // old API code 
-    // findBreedId(breedName, type) {
-    //   const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
-    //   if (!breeds.length) return null;
-    //   const breed = breeds.find(b => 
-    //     b.name.toLowerCase().includes(breedName.toLowerCase()) ||
-    //     breedName.toLowerCase().includes(b.name.toLowerCase())
-    //   );
-    //   return breed ? breed.id : null;
-    // },
     //
 
     async loadAllBreeds() {
