@@ -248,7 +248,7 @@ export default {
     },
 
     async initializePage() {
-      //Load all breed data FIRST (and WAIT for it)
+      //load the breeds first 
       await this.loadAllBreeds();
 
       //Check if user has completed quiz
@@ -256,7 +256,7 @@ export default {
         await this.checkQuizCompletion();
       }
 
-      //Now fetch pets (breeds will be available for matching)
+      //after breed is loaded and quiz is checked, get the pets
       await this.fetchPets();
     },
 
@@ -482,39 +482,44 @@ export default {
       }
     },
 
-    //new API code
     findBreedId(breedName, type) {
+      // if type is dog, use first if not use second 
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
+      
+      // If no breeds loaded
       if (!breeds.length) {
         console.log(`No breeds loaded for ${type}`);
         return null;
       }
 
+      //matching is case-insensitive 
       const normalizedBreedName = breedName.toLowerCase().trim();
       console.log(`Searching for breed: "${breedName}" (${type})`);
 
-      // 1. EXACT match
+      // check if there is a breed whose name matches exactly 
       let breed = breeds.find(b =>
         b.name.toLowerCase().trim() === normalizedBreedName
       );
 
       if (breed) {
-        console.log(`✓ EXACT: "${breedName}" → "${breed.name}"`);
+        console.log(`EXACT: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      // 2. API breed name contains breedname
+      //if no exact match, check if API breed name contains the speciifed breed
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
+
+        //.length avoid false matches with short words
         return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 4;
       });
 
       if (breed) {
-        console.log(`✓ API contains DB: "${breedName}" → "${breed.name}"`);
+        console.log(` API contains DB: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      // 3. Your breed name contains the API breedname 
+      //checks if the specified breed contains the API name (opposite above)
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
         return normalizedBreedName.includes(apiName) && apiName.length >= 4;
@@ -525,7 +530,7 @@ export default {
         return breed.id;
       }
 
-      // 4. Word-by-word match (e.g., "Corgi" matches "Welsh Corgi")
+      // if no match yet, then compare word by word 
       const breedWords = normalizedBreedName.split(/\s+/);
       breed = breeds.find(b => {
         const apiWords = b.name.toLowerCase().trim().split(/\s+/);
@@ -535,16 +540,16 @@ export default {
       });
 
       if (breed) {
-        console.log(`✓ Word match: "${breedName}" → "${breed.name}"`);
+        console.log(` Word match: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      console.log(`✗ NO MATCH for "${breedName}"`);
+      //if no match, show first 5 available breeds then
+      console.log(` NO MATCH for "${breedName}"`);
       console.log(`   Try one of these: ${breeds.slice(0, 5).map(b => b.name).join(', ')}...`);
       return null;
     },
 
-    // old API code 
     // findBreedId(breedName, type) {
     //   const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
     //   if (!breeds.length) return null;
@@ -554,7 +559,7 @@ export default {
     //   );
     //   return breed ? breed.id : null;
     // },
-    //
+  
 
     async loadAllBreeds() {
       try {
@@ -567,7 +572,7 @@ export default {
           fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
         ]);
 
-        // CHECK INDIVIDUAL RESPONSES
+        // check the individual responses
         if (dogResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
           console.log(`✓ Loaded ${this.allDogBreeds.length} dog breeds`);
