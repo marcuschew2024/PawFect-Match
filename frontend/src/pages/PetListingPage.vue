@@ -163,7 +163,6 @@
             <p class="card-text personality">"{{ pet.personality }}"</p>
           </div>
 
-          <!-- Replace the current adoption button section in your PetListingPage.vue -->
           <div class="card-footer bg-transparent">
             <div class="d-grid gap-2">
               <!-- View More Button -->
@@ -171,7 +170,7 @@
                 <i class="bi bi-eye me-1"></i>View More
               </button>
 
-              <!-- Adoption Button - FIXED VERSION -->
+              <!-- Adoption Button -->
               <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
                 <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
               </button>
@@ -208,7 +207,6 @@
 <script>
 const API_BASE_URL = 'http://localhost:3000/api';
 
-// Import the modal component
 import PetDetailModal from '@/components/PetDetailModal.vue';
 
 export default {
@@ -234,7 +232,7 @@ export default {
       isAuthenticated: false,
       hasCompletedQuiz: false,
       userProfile: null,
-      selectedPet: null  // Track selected pet for modal
+      selectedPet: null
     }
   },
   async mounted() {
@@ -247,11 +245,17 @@ export default {
       this.isAuthenticated = !!token;
     },
 
+    // FIXED: Added await to loadAllBreeds() so breeds load BEFORE pets are fetched
     async initializePage() {
+      // Step 1: Load all breed data FIRST (and WAIT for it)
+      await this.loadAllBreeds();
+      
+      // Step 2: Check if user has completed quiz
       if (this.isAuthenticated) {
         await this.checkQuizCompletion();
       }
-      this.loadAllBreeds();
+      
+      // Step 3: Now fetch pets (breeds will be available for matching)
       await this.fetchPets();
     },
 
@@ -281,7 +285,6 @@ export default {
         const token = localStorage.getItem('authToken');
         let url = `${API_BASE_URL}/pets`;
 
-        // Use the enhanced endpoint if user has completed quiz
         if (this.isAuthenticated && this.hasCompletedQuiz) {
           url = `${API_BASE_URL}/pets/with-scores`;
         }
@@ -302,7 +305,6 @@ export default {
 
         let data = await response.json();
 
-        // Process pets data
         this.pets = await this.processPetsWithImages(data);
         this.filteredPets = [...this.pets];
 
@@ -324,7 +326,6 @@ export default {
         const token = localStorage.getItem('authToken');
 
         if (pet.is_favorite) {
-          // Remove from favorites
           await fetch(`${API_BASE_URL}/user/favorites/${pet.id}`, {
             method: 'DELETE',
             headers: {
@@ -333,7 +334,6 @@ export default {
           });
           pet.is_favorite = false;
         } else {
-          // Add to favorites
           await fetch(`${API_BASE_URL}/user/favorites`, {
             method: 'POST',
             headers: {
@@ -345,7 +345,6 @@ export default {
           pet.is_favorite = true;
         }
 
-        // Update the array to trigger reactivity
         this.pets = [...this.pets];
         this.filteredPets = [...this.filteredPets];
 
@@ -477,9 +476,11 @@ export default {
       }
     },
 
-    //new API code
+    // FIXED: Complete rewrite with 4-tier matching strategy
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
+      
+      // If breeds haven't loaded yet, return null
       if (!breeds.length) {
         console.log(`⚠️ No breeds loaded for ${type}`);
         return null;
@@ -488,8 +489,8 @@ export default {
       const normalizedBreedName = breedName.toLowerCase().trim();
       console.log(`🔍 Searching for breed: "${breedName}" (${type})`);
 
-      // 1. EXACT match
-      let breed = breeds.find(b =>
+      // Strategy 1: EXACT match (highest priority)
+      let breed = breeds.find(b => 
         b.name.toLowerCase().trim() === normalizedBreedName
       );
 
@@ -498,7 +499,8 @@ export default {
         return breed.id;
       }
 
-      // 2. API breed name CONTAINS your breed name (e.g., "Pembroke Welsh Corgi" contains "Corgi")
+      // Strategy 2: API breed name CONTAINS your breed name
+      // Example: "Corgi" matches "Cardigan Welsh Corgi"
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
         return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 4;
@@ -509,7 +511,8 @@ export default {
         return breed.id;
       }
 
-      // 3. Your breed name CONTAINS API name (e.g., "Golden Retriever Mix" contains "Golden Retriever")
+      // Strategy 3: Your breed name CONTAINS API name
+      // Example: "Golden Retriever Mix" matches "Golden Retriever"
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
         return normalizedBreedName.includes(apiName) && apiName.length >= 4;
@@ -520,11 +523,12 @@ export default {
         return breed.id;
       }
 
-      // 4. Word-by-word match (e.g., "Corgi" matches "Welsh Corgi")
+      // Strategy 4: Word-by-word match (lowest priority)
+      // Example: "Corgi" matches "Welsh Corgi" by matching the word "Corgi"
       const breedWords = normalizedBreedName.split(/\s+/);
       breed = breeds.find(b => {
         const apiWords = b.name.toLowerCase().trim().split(/\s+/);
-        return breedWords.some(word =>
+        return breedWords.some(word => 
           word.length >= 4 && apiWords.includes(word)
         );
       });
@@ -534,22 +538,13 @@ export default {
         return breed.id;
       }
 
+      // No match found
       console.log(`✗ NO MATCH for "${breedName}"`);
       console.log(`   Try one of these: ${breeds.slice(0, 5).map(b => b.name).join(', ')}...`);
       return null;
     },
 
-    // old API code 
-    // findBreedId(breedName, type) {
-    //   const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
-    //   if (!breeds.length) return null;
-    //   const breed = breeds.find(b => 
-    //     b.name.toLowerCase().includes(breedName.toLowerCase()) ||
-    //     breedName.toLowerCase().includes(b.name.toLowerCase())
-    //   );
-    //   return breed ? breed.id : null;
-    // },
-    //
+    // FIXED: Better error handling for individual breed lists
     async loadAllBreeds() {
       try {
         const token = localStorage.getItem('authToken');
@@ -561,7 +556,7 @@ export default {
           fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
         ]);
 
-        // CHECK INDIVIDUAL RESPONSES
+        // Handle dog breeds
         if (dogResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
           console.log(`✓ Loaded ${this.allDogBreeds.length} dog breeds`);
@@ -569,6 +564,7 @@ export default {
           console.error('❌ Dog breeds failed:', dogResponse.status);
         }
 
+        // Handle cat breeds
         if (catResponse.ok) {
           this.allCatBreeds = await catResponse.json();
           console.log(`✓ Loaded ${this.allCatBreeds.length} cat breeds`);
@@ -580,26 +576,6 @@ export default {
         console.error("❌ Error fetching breed lists:", error);
       }
     },
-    
-    // async loadAllBreeds() {
-    //   try {
-    //     const token = localStorage.getItem('authToken');
-    //     const headers = { 'Content-Type': 'application/json' };
-    //     if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    //     const [dogResponse, catResponse] = await Promise.all([
-    //       fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
-    //       fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
-    //     ]);
-
-    //     if (dogResponse.ok && catResponse.ok) {
-    //       this.allDogBreeds = await dogResponse.json();
-    //       this.allCatBreeds = await catResponse.json();
-    //     }
-    //   } catch (error) {
-    //     console.error("Error fetching breed lists:", error);
-    //   }
-    // },
 
     getColoredPlaceholder(pet) {
       const colors = {
@@ -625,14 +601,12 @@ export default {
       pet.imageLoaded = true;
     },
 
-    // NEW METHODS FOR ADOPTION FLOW
     showPetDetails(pet) {
       this.selectedPet = pet;
       this.$refs.petDetailModal.show();
     },
 
     startAdoption(pet) {
-      // Directly navigate to adoption form for this pet
       this.$router.push(`/adopt/${pet.id}`);
     }
   }
@@ -803,12 +777,10 @@ export default {
 
 .btn-success:hover {
   background: linear-gradient(135deg, #1e8b81, #3cb7b0);
-  /* darker gradient */
   border-color: #1e8b81;
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(78, 205, 196, 0.4);
   color: white;
-  /* keep text visible */
 }
 
 .personality {
