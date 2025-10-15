@@ -259,8 +259,13 @@ export default {
   },
   async mounted() {
     await this.loadUserProfile();
-    await this.loadFavorites();
-    await this.loadAdoptions(); // Load adoptions immediately
+    
+    // Load both favorites and adoptions immediately
+    await Promise.all([
+      this.loadFavorites(),
+      this.loadAdoptions()
+    ]);
+    
     this.activeTab = this.$route.query.tab || 'favorites';
     
     // Store reference for external access
@@ -268,11 +273,7 @@ export default {
   },
   watch: {
     activeTab(newTab) {
-      if (newTab === 'favorites') {
-        this.loadFavorites();
-      } else if (newTab === 'adoptions') {
-        this.loadAdoptions();
-      } else if (newTab === 'quiz') {
+      if (newTab === 'quiz') {
         this.loadQuizResults();
       }
     }
@@ -298,52 +299,52 @@ export default {
     },
 
     async loadFavorites() {
-  this.favoritesLoading = true;
-  try {
-    const token = localStorage.getItem('authToken');
-    
-    // Get favorite IDs
-    const favoritesResponse = await fetch(`${API_BASE_URL}/user/favorites`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+      this.favoritesLoading = true;
+      try {
+        const token = localStorage.getItem('authToken');
+        
+        // Get favorite IDs
+        const favoritesResponse = await fetch(`${API_BASE_URL}/user/favorites`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-    if (favoritesResponse.ok) {
-      const favoriteIds = await favoritesResponse.json();
-      console.log('Favorite IDs:', favoriteIds);
-      
-      if (favoriteIds.length === 0) {
-        this.favoritePets = [];
-        return;
-      }
+        if (favoritesResponse.ok) {
+          const favoriteIds = await favoritesResponse.json();
+          console.log('Favorite IDs:', favoriteIds);
+          
+          if (favoriteIds.length === 0) {
+            this.favoritePets = [];
+            return;
+          }
 
-      // Get ALL pets first (including adopted ones) to ensure we get all favorites
-      const petsResponse = await fetch(`${API_BASE_URL}/pets`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+          // Get ALL pets first (including adopted ones) to ensure we get all favorites
+          const petsResponse = await fetch(`${API_BASE_URL}/pets`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (petsResponse.ok) {
+            let allPets = await petsResponse.json();
+            console.log('All pets from API:', allPets);
+            
+            // Filter to only favorited pets
+            let favoritedPets = allPets.filter(pet => favoriteIds.includes(pet.id));
+            console.log('Raw favorited pets:', favoritedPets);
+            
+            // Process images for ALL favorited pets
+            this.favoritePets = await this.processPetsWithImages(favoritedPets);
+            console.log('Processed favorited pets with images:', this.favoritePets);
+          }
         }
-      });
-
-      if (petsResponse.ok) {
-        let allPets = await petsResponse.json();
-        console.log('All pets from API:', allPets);
-        
-        // Filter to only favorited pets
-        let favoritedPets = allPets.filter(pet => favoriteIds.includes(pet.id));
-        console.log('Raw favorited pets:', favoritedPets);
-        
-        // Process images for ALL favorited pets
-        this.favoritePets = await this.processPetsWithImages(favoritedPets);
-        console.log('Processed favorited pets with images:', this.favoritePets);
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+      } finally {
+        this.favoritesLoading = false;
       }
-    }
-  } catch (error) {
-    console.error('Error loading favorites:', error);
-  } finally {
-    this.favoritesLoading = false;
-  }
-},
+    },
 
     async loadAdoptions() {
       this.adoptionsLoading = true;
@@ -605,11 +606,10 @@ export default {
       return this.getColoredPlaceholder(pet);
     },
 
-   onImageError(event, pet) {
-  console.log('Image error for pet:', pet.name, pet);
-  // If the image fails to load, set it to the colored placeholder
-  event.target.src = this.getColoredPlaceholder(pet);
-},
+    onImageError(pet) {
+      pet.image = this.getColoredPlaceholder(pet);
+    },
+
     getColoredPlaceholder(pet) {
       const colors = {
         dog: ['#ffb6c1', '#ffd1dc', '#ffecb3', '#c8e6c9'],
