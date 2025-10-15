@@ -32,14 +32,8 @@
         <!-- Search Input -->
         <div class="col-lg-3 col-md-6">
           <label for="searchInput" class="form-label">SEARCH PETS</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="searchInput"
-            v-model="searchTerm"
-            placeholder="Name, breed, or personality..."
-            autocomplete="off"
-          >
+          <input type="text" class="form-control" id="searchInput" v-model="searchTerm"
+            placeholder="Name, breed, or personality..." autocomplete="off">
         </div>
 
         <!-- Type Filter -->
@@ -96,7 +90,7 @@
           Loading pets for You...
         </div>
       </div>
-      
+
       <div v-else-if="error" class="col-12">
         <div class="error-message text-center">
           <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
@@ -109,38 +103,29 @@
           </div>
         </div>
       </div>
-      
+
       <div v-else-if="filteredPets.length === 0" class="col-12">
         <div class="no-results">No pets found matching your criteria.</div>
       </div>
-      
+
       <div v-else class="col-md-6 col-lg-4 mb-4" v-for="pet in filteredPets" :key="pet.id">
         <div class="card h-100 pet-card">
           <div class="position-relative">
-            <img 
-              :src="pet.displayImage" 
-              :alt="pet.name"
-              class="card-img-top"
-              :class="{ 'image-loaded': pet.imageLoaded }"
-              @load="onImageLoad(pet)"
-              @error="onImageError(pet)"
-              loading="lazy"
-            >
-            
+            <img :src="pet.displayImage" :alt="pet.name" class="card-img-top"
+              :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
+              loading="lazy">
+
             <!-- Compatibility Score Badge -->
-            <div v-if="hasCompletedQuiz && pet.compatibility_score" 
-                 class="compatibility-badge">
+            <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-badge">
               {{ pet.compatibility_score }}% Match
             </div>
-            
+
             <!-- Favorite Button -->
-            <button v-if="isAuthenticated" 
-                    class="favorite-btn" 
-                    @click="toggleFavorite(pet)"
-                    :class="{ 'favorited': pet.is_favorite }">
+            <button v-if="isAuthenticated" class="favorite-btn" @click="toggleFavorite(pet)"
+              :class="{ 'favorited': pet.is_favorite }">
               <i class="bi" :class="pet.is_favorite ? 'bi-heart-fill' : 'bi-heart'"></i>
             </button>
-            
+
             <div v-if="pet.placeholderImage && pet.imageLoaded" class="api-badge">
               Placeholder Image
             </div>
@@ -148,10 +133,10 @@
               <i class="bi bi-arrow-repeat spinner"></i>
             </div>
           </div>
-          
+
           <div class="card-body d-flex flex-column">
             <h5 class="card-title">{{ pet.name }}</h5>
-            
+
             <!-- Compatibility Meter -->
             <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-meter mb-3">
               <div class="d-flex justify-content-between align-items-center mb-1">
@@ -161,76 +146,62 @@
                 </small>
               </div>
               <div class="progress" style="height: 6px;">
-                <div class="progress-bar bg-primary" 
-                     :style="{ width: pet.compatibility_score + '%' }"></div>
+                <div class="progress-bar bg-primary" :style="{ width: pet.compatibility_score + '%' }"></div>
               </div>
             </div>
-            
+
             <p class="card-text mb-2 flex-grow-1">
               <strong>Age:</strong> {{ pet.age }}<br>
               <strong>Breed:</strong> {{ pet.breed }}<br>
               <strong>Size:</strong> {{ pet.size }}<br>
               <strong>Gender:</strong> {{ pet.gender }}<br>
-              <strong>Activity:</strong> 
+              <strong>Activity:</strong>
               <span class="badge" :class="getActivityClass(pet.activity_level)">
                 {{ pet.activity_level }}
               </span>
             </p>
             <p class="card-text personality">"{{ pet.personality }}"</p>
           </div>
-          
+
           <!-- Replace the current adoption button section in your PetListingPage.vue -->
-<div class="card-footer bg-transparent">
-  <div class="d-grid gap-2">
-    <!-- View More Button -->
-    <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
-      <i class="bi bi-eye me-1"></i>View More
-    </button>
-    
-    <!-- Adoption Button - FIXED VERSION -->
-    <button v-if="isAuthenticated && !pet.is_adopted" 
-            class="btn btn-success"
-            @click="startAdoption(pet)">
-      <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
-    </button>
-    
-    <button v-else-if="!isAuthenticated" 
-            class="btn btn-outline-success"
-            @click="$router.push('/login')">
-      <i class="bi bi-person me-1"></i>Login to Adopt
-    </button>
-    
-    <button v-else-if="pet.is_adopted"
-            class="btn btn-secondary"
-            disabled>
-      <i class="bi bi-check-circle me-1"></i>Already Adopted
-    </button>
-    
-    <!-- Favorite Buttons -->
-    <button v-if="isAuthenticated && !pet.is_favorite" 
-            class="btn btn-outline-primary btn-sm"
-            @click="toggleFavorite(pet)">
-      <i class="bi bi-heart me-1"></i>Add to Favorites
-    </button>
-    <button v-else-if="isAuthenticated && pet.is_favorite"
-            class="btn btn-outline-danger btn-sm"
-            @click="toggleFavorite(pet)">
-      <i class="bi bi-heart-fill me-1"></i>Remove Favorite
-    </button>
-  </div>
-</div>
+          <div class="card-footer bg-transparent">
+            <div class="d-grid gap-2">
+              <!-- View More Button -->
+              <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
+                <i class="bi bi-eye me-1"></i>View More
+              </button>
+
+              <!-- Adoption Button - FIXED VERSION -->
+              <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
+                <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
+              </button>
+
+              <button v-else-if="!isAuthenticated" class="btn btn-outline-success" @click="$router.push('/login')">
+                <i class="bi bi-person me-1"></i>Login to Adopt
+              </button>
+
+              <button v-else-if="pet.is_adopted" class="btn btn-secondary" disabled>
+                <i class="bi bi-check-circle me-1"></i>Already Adopted
+              </button>
+
+              <!-- Favorite Buttons -->
+              <button v-if="isAuthenticated && !pet.is_favorite" class="btn btn-outline-primary btn-sm"
+                @click="toggleFavorite(pet)">
+                <i class="bi bi-heart me-1"></i>Add to Favorites
+              </button>
+              <button v-else-if="isAuthenticated && pet.is_favorite" class="btn btn-outline-danger btn-sm"
+                @click="toggleFavorite(pet)">
+                <i class="bi bi-heart-fill me-1"></i>Remove Favorite
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Pet Detail Modal -->
-    <PetDetailModal 
-      ref="petDetailModal"
-      :pet="selectedPet"
-      :isAuthenticated="isAuthenticated"
-      :hasCompletedQuiz="hasCompletedQuiz"
-      @start-adoption="startAdoption"
-    />
+    <PetDetailModal ref="petDetailModal" :pet="selectedPet" :isAuthenticated="isAuthenticated"
+      :hasCompletedQuiz="hasCompletedQuiz" @start-adoption="startAdoption" />
   </div>
 </template>
 
@@ -292,7 +263,7 @@ export default {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (response.ok) {
           this.userProfile = await response.json();
           this.hasCompletedQuiz = true;
@@ -305,11 +276,11 @@ export default {
     async fetchPets() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const token = localStorage.getItem('authToken');
         let url = `${API_BASE_URL}/pets`;
-        
+
         // Use the enhanced endpoint if user has completed quiz
         if (this.isAuthenticated && this.hasCompletedQuiz) {
           url = `${API_BASE_URL}/pets/with-scores`;
@@ -324,17 +295,17 @@ export default {
         }
 
         const response = await fetch(url, { headers });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         let data = await response.json();
-        
+
         // Process pets data
         this.pets = await this.processPetsWithImages(data);
         this.filteredPets = [...this.pets];
-        
+
       } catch (error) {
         console.error('Error fetching pets:', error);
         this.error = error.message;
@@ -351,7 +322,7 @@ export default {
 
       try {
         const token = localStorage.getItem('authToken');
-        
+
         if (pet.is_favorite) {
           // Remove from favorites
           await fetch(`${API_BASE_URL}/user/favorites/${pet.id}`, {
@@ -373,11 +344,11 @@ export default {
           });
           pet.is_favorite = true;
         }
-        
+
         // Update the array to trigger reactivity
         this.pets = [...this.pets];
         this.filteredPets = [...this.filteredPets];
-        
+
       } catch (error) {
         console.error('Error toggling favorite:', error);
       }
@@ -394,19 +365,19 @@ export default {
 
     applyFilters() {
       const filtered = this.pets.filter(pet => {
-        const matchesSearch = !this.searchTerm || 
+        const matchesSearch = !this.searchTerm ||
           pet.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
           pet.breed.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
           pet.personality.toLowerCase().includes(this.searchTerm.toLowerCase());
-        
+
         const matchesType = !this.filters.type || pet.type === this.filters.type;
         const matchesSize = !this.filters.size || pet.size === this.filters.size;
-        const matchesScore = !this.hasCompletedQuiz || 
+        const matchesScore = !this.hasCompletedQuiz ||
           pet.compatibility_score >= parseInt(this.filters.minScore);
-        
+
         return matchesSearch && matchesType && matchesSize && matchesScore;
       });
-      
+
       this.filteredPets = filtered;
     },
 
@@ -446,7 +417,7 @@ export default {
     async fetchApiImagesForPets(pets) {
       const petsNeedingImages = pets.filter(pet => pet.placeholderImage);
       const batchSize = 3;
-      
+
       for (let i = 0; i < petsNeedingImages.length; i += batchSize) {
         const batch = petsNeedingImages.slice(i, i + batchSize);
         const promises = batch.map(async (pet) => {
@@ -475,24 +446,24 @@ export default {
       if (this.imageCache.has(cacheKey)) {
         return this.imageCache.get(cacheKey);
       }
-      
+
       try {
         const breedId = this.findBreedId(pet.breed, pet.type);
-        const apiUrl = pet.type === "dog" 
+        const apiUrl = pet.type === "dog"
           ? `${API_BASE_URL}/external/dog-images`
           : `${API_BASE_URL}/external/cat-images`;
-        
+
         const params = new URLSearchParams({ limit: "1" });
         if (breedId) params.append("breed_id", breedId);
-        
+
         const token = localStorage.getItem('authToken');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const response = await fetch(`${apiUrl}?${params}`, { headers });
-        
+
         if (!response.ok) throw new Error(`API error: ${response.status}`);
-        
+
         const data = await response.json();
         if (data && data.length > 0 && data[0].url) {
           const imageUrl = data[0].url;
@@ -506,27 +477,60 @@ export default {
       }
     },
 
+    //NEW/new API code 
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
       if (!breeds.length) return null;
-      const breed = breeds.find(b => 
-        b.name.toLowerCase().includes(breedName.toLowerCase()) ||
-        breedName.toLowerCase().includes(b.name.toLowerCase())
+
+      const normalizedBreedName = breedName.toLowerCase().trim();
+
+      // Try exact match first
+      let breed = breeds.find(b =>
+        b.name.toLowerCase() === normalizedBreedName
       );
+
+      // If no exact match, try partial match but be more strict
+      if (!breed) {
+        breed = breeds.find(b => {
+          const apiBreedName = b.name.toLowerCase();
+          return (apiBreedName.includes(normalizedBreedName) ||
+            normalizedBreedName.includes(apiBreedName)) &&
+            Math.abs(apiBreedName.length - normalizedBreedName.length) < 10;
+        });
+      }
+
+      if (breed) {
+        console.log(`✓ Matched "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
+      } else {
+        console.log(`✗ No breed match for "${breedName}"`);
+      }
+
       return breed ? breed.id : null;
     },
+
+    // old API code 
+    // findBreedId(breedName, type) {
+    //   const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
+    //   if (!breeds.length) return null;
+    //   const breed = breeds.find(b => 
+    //     b.name.toLowerCase().includes(breedName.toLowerCase()) ||
+    //     breedName.toLowerCase().includes(b.name.toLowerCase())
+    //   );
+    //   return breed ? breed.id : null;
+    // },
+    //
 
     async loadAllBreeds() {
       try {
         const token = localStorage.getItem('authToken');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const [dogResponse, catResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
           fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
         ]);
-        
+
         if (dogResponse.ok && catResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
           this.allCatBreeds = await catResponse.json();
@@ -544,7 +548,7 @@ export default {
       const typeColors = colors[pet.type] || colors.dog;
       const color = typeColors[pet.id % typeColors.length];
       const emoji = pet.type === 'dog' ? '🐕' : '🐱';
-      
+
       return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='250' viewBox='0 0 300 250'%3E%3Crect fill='${color}' width='300' height='250'/%3E%3Ctext fill='%23666' font-size='24' font-family='system-ui' x='150' y='125' text-anchor='middle' dominant-baseline='middle'%3E${emoji}%3C/text%3E%3Ctext fill='%23333' font-size='16' font-family='system-ui' x='150' y='160' text-anchor='middle'%3E${pet.name}%3C/text%3E%3C/svg%3E`;
     },
 
@@ -659,8 +663,13 @@ export default {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .filter-section {
@@ -732,11 +741,13 @@ export default {
 }
 
 .btn-success:hover {
-  background: linear-gradient(135deg, #1e8b81, #3cb7b0); /* darker gradient */
+  background: linear-gradient(135deg, #1e8b81, #3cb7b0);
+  /* darker gradient */
   border-color: #1e8b81;
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(78, 205, 196, 0.4);
-  color: white; /* keep text visible */
+  color: white;
+  /* keep text visible */
 }
 
 .personality {
@@ -755,6 +766,7 @@ export default {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
