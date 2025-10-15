@@ -488,50 +488,54 @@ export default {
       const normalizedBreedName = breedName.toLowerCase().trim();
       console.log(`🔍 Searching for breed: "${breedName}" (${type})`);
 
-      // 1. Try EXACT match first (most reliable)
+      // 1. EXACT match
       let breed = breeds.find(b =>
         b.name.toLowerCase().trim() === normalizedBreedName
       );
 
       if (breed) {
-        console.log(`✓ EXACT match: "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
+        console.log(`✓ EXACT: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      // 2. Try matching first word (e.g., "Golden" in "Golden Retriever")
-      const firstWord = normalizedBreedName.split(' ')[0];
+      // 2. API breed name CONTAINS your breed name (e.g., "Pembroke Welsh Corgi" contains "Corgi")
       breed = breeds.find(b => {
-        const apiFirstWord = b.name.toLowerCase().split(' ')[0];
-        return apiFirstWord === firstWord && firstWord.length > 3; // avoid matching "mix"
+        const apiName = b.name.toLowerCase().trim();
+        return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 4;
       });
 
       if (breed) {
-        console.log(`✓ First-word match: "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
+        console.log(`✓ API contains DB: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      // 3. Try partial match with strict criteria
+      // 3. Your breed name CONTAINS API name (e.g., "Golden Retriever Mix" contains "Golden Retriever")
       breed = breeds.find(b => {
-        const apiBreedName = b.name.toLowerCase().trim();
-        const lengthDiff = Math.abs(apiBreedName.length - normalizedBreedName.length);
-
-        // Only match if:
-        // - One contains the other
-        // - Length difference is small (< 8 chars)
-        // - Breed name is substantial (> 3 chars)
-        return lengthDiff < 8 &&
-          normalizedBreedName.length > 3 &&
-          (apiBreedName.includes(normalizedBreedName) ||
-            normalizedBreedName.includes(apiBreedName));
+        const apiName = b.name.toLowerCase().trim();
+        return normalizedBreedName.includes(apiName) && apiName.length >= 4;
       });
 
       if (breed) {
-        console.log(`✓ Partial match: "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
+        console.log(`✓ DB contains API: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      // 4. No match found
-      console.log(`✗ NO MATCH for "${breedName}" in ${breeds.length} ${type} breeds`);
+      // 4. Word-by-word match (e.g., "Corgi" matches "Welsh Corgi")
+      const breedWords = normalizedBreedName.split(/\s+/);
+      breed = breeds.find(b => {
+        const apiWords = b.name.toLowerCase().trim().split(/\s+/);
+        return breedWords.some(word =>
+          word.length >= 4 && apiWords.includes(word)
+        );
+      });
+
+      if (breed) {
+        console.log(`✓ Word match: "${breedName}" → "${breed.name}"`);
+        return breed.id;
+      }
+
+      console.log(`✗ NO MATCH for "${breedName}"`);
+      console.log(`   Try one of these: ${breeds.slice(0, 5).map(b => b.name).join(', ')}...`);
       return null;
     },
 
