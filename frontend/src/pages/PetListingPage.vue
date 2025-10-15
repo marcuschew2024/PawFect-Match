@@ -502,7 +502,6 @@ export default {
       );
 
       if (breed) {
-        console.log(`EXACT: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
