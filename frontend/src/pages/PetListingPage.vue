@@ -550,7 +550,6 @@ export default {
     //   return breed ? breed.id : null;
     // },
     //
-
     async loadAllBreeds() {
       try {
         const token = localStorage.getItem('authToken');
@@ -562,14 +561,45 @@ export default {
           fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
         ]);
 
-        if (dogResponse.ok && catResponse.ok) {
+        // CHECK INDIVIDUAL RESPONSES
+        if (dogResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
-          this.allCatBreeds = await catResponse.json();
+          console.log(`✓ Loaded ${this.allDogBreeds.length} dog breeds`);
+        } else {
+          console.error('❌ Dog breeds failed:', dogResponse.status);
         }
+
+        if (catResponse.ok) {
+          this.allCatBreeds = await catResponse.json();
+          console.log(`✓ Loaded ${this.allCatBreeds.length} cat breeds`);
+        } else {
+          console.error('❌ Cat breeds failed:', catResponse.status);
+        }
+
       } catch (error) {
-        console.error("Error fetching breed lists:", error);
+        console.error("❌ Error fetching breed lists:", error);
       }
     },
+    
+    // async loadAllBreeds() {
+    //   try {
+    //     const token = localStorage.getItem('authToken');
+    //     const headers = { 'Content-Type': 'application/json' };
+    //     if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    //     const [dogResponse, catResponse] = await Promise.all([
+    //       fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
+    //       fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
+    //     ]);
+
+    //     if (dogResponse.ok && catResponse.ok) {
+    //       this.allDogBreeds = await dogResponse.json();
+    //       this.allCatBreeds = await catResponse.json();
+    //     }
+    //   } catch (error) {
+    //     console.error("Error fetching breed lists:", error);
+    //   }
+    // },
 
     getColoredPlaceholder(pet) {
       const colors = {
