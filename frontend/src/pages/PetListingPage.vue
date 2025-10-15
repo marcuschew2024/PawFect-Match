@@ -480,32 +480,59 @@ export default {
     //new API code
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
-      if (!breeds.length) return null;
+      if (!breeds.length) {
+        console.log(`⚠️ No breeds loaded for ${type}`);
+        return null;
+      }
 
       const normalizedBreedName = breedName.toLowerCase().trim();
+      console.log(`🔍 Searching for breed: "${breedName}" (${type})`);
 
-      // Try exact match first
+      // 1. Try EXACT match first (most reliable)
       let breed = breeds.find(b =>
-        b.name.toLowerCase() === normalizedBreedName
+        b.name.toLowerCase().trim() === normalizedBreedName
       );
 
-      // If no exact match, try partial match but be more strict
-      if (!breed) {
-        breed = breeds.find(b => {
-          const apiBreedName = b.name.toLowerCase();
-          return (apiBreedName.includes(normalizedBreedName) ||
-            normalizedBreedName.includes(apiBreedName)) &&
-            Math.abs(apiBreedName.length - normalizedBreedName.length) < 10;
-        });
+      if (breed) {
+        console.log(`✓ EXACT match: "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
+        return breed.id;
       }
+
+      // 2. Try matching first word (e.g., "Golden" in "Golden Retriever")
+      const firstWord = normalizedBreedName.split(' ')[0];
+      breed = breeds.find(b => {
+        const apiFirstWord = b.name.toLowerCase().split(' ')[0];
+        return apiFirstWord === firstWord && firstWord.length > 3; // avoid matching "mix"
+      });
 
       if (breed) {
-        console.log(`✓ Matched "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
-      } else {
-        console.log(`✗ No breed match for "${breedName}"`);
+        console.log(`✓ First-word match: "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
+        return breed.id;
       }
 
-      return breed ? breed.id : null;
+      // 3. Try partial match with strict criteria
+      breed = breeds.find(b => {
+        const apiBreedName = b.name.toLowerCase().trim();
+        const lengthDiff = Math.abs(apiBreedName.length - normalizedBreedName.length);
+
+        // Only match if:
+        // - One contains the other
+        // - Length difference is small (< 8 chars)
+        // - Breed name is substantial (> 3 chars)
+        return lengthDiff < 8 &&
+          normalizedBreedName.length > 3 &&
+          (apiBreedName.includes(normalizedBreedName) ||
+            normalizedBreedName.includes(apiBreedName));
+      });
+
+      if (breed) {
+        console.log(`✓ Partial match: "${breedName}" → "${breed.name}" (ID: ${breed.id})`);
+        return breed.id;
+      }
+
+      // 4. No match found
+      console.log(`✗ NO MATCH for "${breedName}" in ${breeds.length} ${type} breeds`);
+      return null;
     },
 
     // old API code 
