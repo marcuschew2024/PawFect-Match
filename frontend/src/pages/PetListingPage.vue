@@ -514,7 +514,7 @@ export default {
         return breed.id;
       }
 
-      // 3. Your breed name CONTAINS API name (e.g., "Golden Retriever Mix" contains "Golden Retriever")
+      // 3. Your breed name contains the API breedname 
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
         return normalizedBreedName.includes(apiName) && apiName.length >= 4;
@@ -555,6 +555,7 @@ export default {
     //   return breed ? breed.id : null;
     // },
     //
+
     async loadAllBreeds() {
       try {
         const token = localStorage.getItem('authToken');
