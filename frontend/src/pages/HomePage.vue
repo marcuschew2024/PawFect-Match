@@ -81,7 +81,7 @@
               what drives us every day.
             </p>
             <router-link to="/About" class="btn btn-lg btn-coral">
-              Learn More About Us <i class="bi bi-arrow-right"></i>
+              About Us <i class="bi bi-arrow-right"></i>
             </router-link>
           </div>
         </div>
@@ -282,7 +282,7 @@ export default {
 }
 
 .btn-hero-primary {
-  background: linear-gradient(135deg, #ff8488 0%, #fc9d9d 100%);
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
   color: white;
   border: none;
   padding: 14px 32px;
@@ -450,7 +450,7 @@ export default {
 }
 
 .btn-coral {
-  background: linear-gradient(135deg, #ff8488 0%, #fc9d9d 100%);
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
   color: white;
   border: none;
   padding: 12px 25px;
