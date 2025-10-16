@@ -18,7 +18,7 @@
               Every pet deserves a loving home, and every person deserves the perfect companion.
             </p>
             <div class="hero-buttons mb-5">
-              <router-link to="/pets" class="btn btn-hero-primary me-3 mb-2">
+              <router-link to="/pets" class="btn btn-hero-primary btn-lg mb-2">
                 Browse Pets <i class="bi bi-arrow-right ms-2"></i>
               </router-link>
             </div>
@@ -80,8 +80,8 @@
               quiz, we connect loving families with pets that feel just right. Get to know how PawFect Match started and
               what drives us every day.
             </p>
-            <router-link to="/About" class="btn btn-coral">
-              Learn More About Us <i class="bi bi-arrow-right ms-2"></i>
+            <router-link to="/About" class="btn btn-lg btn-coral">
+              Learn More About Us <i class="bi bi-arrow-right"></i>
             </router-link>
           </div>
         </div>
