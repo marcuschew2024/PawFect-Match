@@ -176,10 +176,6 @@
                 <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
               </button>
 
-              <button v-else-if="!isAuthenticated" class="btn btn-outline-success" @click="$router.push('/login')">
-                <i class="bi bi-person me-1"></i>Login to Adopt
-              </button>
-
               <button v-else-if="pet.is_adopted" class="btn btn-secondary" disabled>
                 <i class="bi bi-check-circle me-1"></i>Already Adopted
               </button>
