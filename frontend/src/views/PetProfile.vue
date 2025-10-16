@@ -203,6 +203,15 @@
                   <p class="mb-0">"{{ pet.personality }}"</p>
                 </div>
               </div>
+              <!-- background story -->
+              <div class="mb-4" v-if="pet.background">
+                <h5 class="section-title mb-3">
+                  <i class="bi bi-heart text-danger me-2"></i>Background story
+                </h5>
+                <div class="background-story-card">
+                  <p class="mb-0">"{{ pet.background }}"</p>
+                </div>
+              </div>
 
               <!-- Compatibility Progress -->
               <div v-if="hasCompletedQuiz && pet.compatibility_score" class="mb-4">
@@ -242,10 +251,6 @@
                         <span class="status" :class="getVaccinationStatusClass()">
                           {{ pet.vaccination_status || 'Unknown' }}
                         </span>
-                      </div>
-                      <div class="info-list-item">
-                        <span>Adoption Fee</span>
-                        <span class="status yes">${{ pet.adoption_fee || 'Free' }}</span>
                       </div>
                       <div class="info-list-item">
                         <span>Health Status</span>
@@ -313,6 +318,40 @@
                   </div>
                 </div>
               </div>
+                 <!--to add extra things here, such as HDB requirements -->
+              <div class="mt-4">
+                <h5 class="section-title mb-3">
+                  <i class="bi bi-clipboard-check text-primary me-2"></i>Other Requirements
+                </h5>
+                <div class="care-item2">
+                      <span>Adoption Fee</span>
+                      <span class="status yes">${{ pet.adoption_fee || 'Free' }}</span>
+                </div>
+                <div class="care-requirements">
+                  <div class="care-item2" v-if="pet.HDB_approved">
+                    <i class="bi bi-building text-success"></i>
+                    <span>{{ getHDBStatus() }}</span>
+                
+                  </div>
+                  <div class="care-item2" v-else>
+                    <i class="bi bi-building text-danger"></i>
+                    <span>{{ getHDBStatus() }}</span>
+                    
+                  </div>
+                  
+                  <div class="care-item2" v-if="pet.HDB_approved && pet.type === 'cat'">
+                    <ul class="hdb-checklist">
+                      <li><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>HDB permits up to 2 cats per household</li>
+                      <li><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Windows and gates must be mashed up</li>
+                    </ul>
+                  </div>
+                  <div class="care-item2" v-if="pet.type === 'dog'">
+                      <span> HDB regulations permit only one dog per flat</span>
+                  </div>
+
+                </div>
+                
+              </div>
             </div>
           </div>
         </div>
@@ -338,7 +377,8 @@ export default {
       adopting: false,
       imageCache: new Map(),
       allDogBreeds: [],
-      allCatBreeds: []
+      allCatBreeds: [],
+      HDB_approved:null
     }
   },
   async mounted() {
@@ -375,9 +415,10 @@ export default {
       this.error = null;
       
       try {
+        // get petID from the URL
         const petId = this.$route.params.petId;
         console.log('Loading pet details for ID:', petId);
-        
+        // If user has logged in, they would be sent to the login page
         const token = localStorage.getItem('authToken');
         const headers = {
           'Content-Type': 'application/json'
@@ -387,7 +428,7 @@ export default {
           headers['Authorization'] = `Bearer ${token}`;
         }
 
-        // Try to get pet with compatibility scores if authenticated and quiz completed
+        // Try to get pet with compatibility scores if authenticated and quiz completed + fetch pet data from API
         let url = `${API_BASE_URL}/pets/${petId}`;
         let response = await fetch(url, { headers });
         
@@ -710,8 +751,12 @@ export default {
         'Large': 'homes with yards or large spaces'
       };
       return sizeMap[size] || 'various living situations';
-    }
+    },
+    getHDBStatus() {
+      return this.pet.HDB_approved ? "HDB approved" : "Not HDB approved";
+}
   }
+    
 }
 </script>
 
@@ -880,6 +925,14 @@ export default {
   font-style: italic;
   color: #666;
 }
+.background-story-card {
+  background: linear-gradient(135deg, #e6f0ff, #cce0ff);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 4px solid #0071b6;
+  font-style: italic;
+  color: #666;
+}
 
 .compatibility-progress {
   background: white;
@@ -942,6 +995,15 @@ export default {
   border-radius: 8px;
   border-left: 4px solid #4ECDC4;
 }
+.care-item2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #d94e98;
+}
 
 .btn-success {
   background: linear-gradient(135deg, #4ECDC4, #6EE7E7);
@@ -999,5 +1061,26 @@ export default {
     padding: 0.75rem 1rem;
     font-size: 1rem;
   }
+  .hdb-checklist {
+  list-style: none!important; /* remove default bullets */
+  padding-left: 0;
+  margin: 0;
+}
+
+.hdb-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* space between icon and text */
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-left: 4px solid #ffc107; /* yellow accent like warning */
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  
+}
+
+
 }
 </style>
