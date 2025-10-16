@@ -71,7 +71,7 @@
         <!-- Action Buttons -->
         <div class="col-lg-3 col-md-6">
           <div class="d-flex gap-2">
-            <button class="btn btn-primary flex-fill" @click="applyFilters">
+            <button class="btn btn-pink flex-fill" @click="applyFilters">
               <i class="bi bi-funnel me-2"></i>APPLY FILTERS
             </button>
             <button class="btn btn-outline-secondary" @click="resetFilters">
@@ -481,7 +481,7 @@ export default {
     findBreedId(breedName, type) {
       // if type is dog, use first if not use second 
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
-      
+
       // If no breeds loaded
       if (!breeds.length) {
         console.log(`No breeds loaded for ${type}`);
@@ -555,7 +555,7 @@ export default {
     //   );
     //   return breed ? breed.id : null;
     // },
-  
+
 
     async loadAllBreeds() {
       try {
@@ -776,7 +776,23 @@ export default {
   animation-delay: 0.2s;
 }
 
-.view-more-btn {
+.btn-pink {
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-pink:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
+}
+
+/* .view-more-btn {
   background: var(--primary-pink);
   border: 2px solid var(--primary-pink);
   color: var(--text-dark);
@@ -788,14 +804,30 @@ export default {
   letter-spacing: 0.5px;
   font-size: 0.85rem;
   width: 100%;
+} */
+
+.view-more-btn {
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .view-more-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
+}
+
+/* .view-more-btn:hover {
   background: var(--primary-pink-dark);
   border-color: var(--primary-pink-dark);
   transform: translateY(-2px);
   box-shadow: var(--shadow-heavy);
-}
+} */
 
 .btn-success {
   background: linear-gradient(135deg, #4ECDC4, #6EE7E7);
@@ -839,5 +871,6 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
+
 }
 </style>
