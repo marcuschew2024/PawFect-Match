@@ -282,7 +282,7 @@ export default {
 }
 
 .btn-hero-primary {
-  background: linear-gradient(135deg, #FF9A9E 0%, #FFB5B5 100%);
+  background: linear-gradient(135deg, #ff8488 0%, #fc9d9d 100%);
   color: white;
   border: none;
   padding: 14px 32px;
@@ -450,7 +450,7 @@ export default {
 }
 
 .btn-coral {
-  background: linear-gradient(135deg, #FF9A9E 0%, #FFB5B5 100%);
+  background: linear-gradient(135deg, #ff8488 0%, #fc9d9d 100%);
   color: white;
   border: none;
   padding: 12px 25px;
