@@ -168,7 +168,7 @@
             <div class="d-grid gap-2">
               <!-- View More Button -->
               <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
-                <i class="bi bi-eye me-1"></i>View More
+                <i class="bi me-1"></i>View More
               </button>
 
               <!-- Adoption Button -->
