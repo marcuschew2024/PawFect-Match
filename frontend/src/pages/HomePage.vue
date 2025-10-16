@@ -231,11 +231,6 @@
           </div>
         </div>
 
-        <!-- <div class="text-center mt-4">
-          <a href="#" class="btn btn-outline-coral">
-            Read More Success Stories <i class="bi bi-arrow-right ms-2"></i>
-          </a>
-        </div> -->
       </div>
     </section>
   </div>
@@ -248,11 +243,6 @@ export default {
 </script>
 
 <style scoped>
-:root {
-  --coral-pink: #FFB5B5;
-  --coral: #FF9A9E;
-  --dark-coral: #eb7e7e;
-}
 
 /* Hero Section */
 .hero-section {
@@ -273,10 +263,12 @@ export default {
 
 .hero-title {
   text-align: left;
-  font-weight: 800;
+  /* font-weight: 800; */
   font-size: 2.5 rem;
   line-height: 1.2;
-  color: #1a1a1a;
+  /* color: #1a1a1a; */
+  color: var(--text-dark);
+
 }
 
 .highlight {
@@ -333,9 +325,10 @@ export default {
 }
 
 .stat-number {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #1a1a1a;
+  font-size: 2.7rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  /* color: #1a1a1a; */
   margin-bottom: 5px;
 }
 
@@ -381,7 +374,7 @@ export default {
   font-size: 0.85rem;
 }
 
-/* Mission Section */
+/* About Section */
 .About-section {
   padding: 100px 0;
   background: white;
@@ -438,8 +431,8 @@ export default {
 
 .section-title {
   font-size: 2.5rem;
-  font-weight: 800;
-  color: #1a1a1a;
+  font-weight: 700;
+  color: var(--text-dark);
   margin-bottom: 20px;
 }
 
@@ -460,8 +453,7 @@ export default {
   background: linear-gradient(135deg, #FF9A9E 0%, #FFB5B5 100%);
   color: white;
   border: none;
-  padding: 12px 28px;
-  border-radius: 50px;
+  padding: 12px 25px;
   font-weight: 600;
   transition: all 0.3s ease;
 }
@@ -473,7 +465,7 @@ export default {
   color: white;
 }
 
-/* Process Section */
+/* step section */
 .step-section {
   padding: 100px 0;
   background: linear-gradient(135deg, #FFF5F5 0%, #FFF0F0 100%);
@@ -526,7 +518,7 @@ export default {
 .process-title {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--text-dark);
   margin-bottom: 15px;
 }
 
@@ -603,84 +595,6 @@ export default {
   color: white;
   border-color: transparent;
   transform: translateY(-2px);
-}
-
-/* CTA Section */
-.cta-section {
-  width: 100%;
-  margin: 0;
-  padding: 100px 20px;
-  background: linear-gradient(135deg, #FFB5B5 0%, #FF9A9E 50%, #eb7e7e 100%);
-  color: white;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.cta-section::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.2), transparent 60%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.15), transparent 70%);
-  pointer-events: none;
-}
-
-.cta-title {
-  font-size: 2.8rem;
-  font-weight: 800;
-  margin-bottom: 20px;
-  position: relative;
-  z-index: 1;
-}
-
-.cta-text {
-  font-size: 1.2rem;
-  margin-bottom: 40px;
-  color: rgba(255, 255, 255, 0.95);
-  position: relative;
-  z-index: 1;
-}
-
-.btn-cta-white {
-  background: white;
-  color: #FF9A9E;
-  border: none;
-  padding: 14px 32px;
-  border-radius: 50px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 1;
-}
-
-.btn-cta-white:hover {
-  background: #FFF5F5;
-  color: #eb7e7e;
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.btn-cta-outline {
-  background: transparent;
-  color: white;
-  border: 2px solid white;
-  padding: 14px 32px;
-  border-radius: 50px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 1;
-}
-
-.btn-cta-outline:hover {
-  background: white;
-  color: #FF9A9E;
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 /* Responsive Design */
