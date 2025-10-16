@@ -164,7 +164,7 @@ export default {
 
 /* Meet Our Pets Button */
 .btn-primary {
-  background: linear-gradient(135deg, #ff8488 0%, #fe9898 100%);
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
   color: white;
   border: none;
   padding: 12px 25px;
