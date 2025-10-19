@@ -32,16 +32,10 @@
           <div class="card shadow-sm border-0">
             <div class="card-body p-0">
               <div class="pet-image-container position-relative">
-                <img 
-                  :src="pet.displayImage" 
-                  :alt="pet.name"
-                  class="card-img-top pet-image"
-                  :class="{ 'image-loaded': pet.imageLoaded }"
-                  @load="onImageLoad(pet)"
-                  @error="onImageError(pet)"
-                  loading="lazy"
-                />
-                
+                <img :src="pet.displayImage" :alt="pet.name" class="card-img-top pet-image"
+                  :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
+                  loading="lazy" />
+
                 <!-- Image Loading Overlay -->
                 <div v-if="!pet.imageLoaded" class="image-loading-overlay">
                   <div class="spinner-border text-primary" role="status">
@@ -56,8 +50,7 @@
                 </div>
 
                 <!-- Compatibility Badge -->
-                <div v-if="hasCompletedQuiz && pet.compatibility_score" 
-                     class="compatibility-badge">
+                <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-badge">
                   {{ pet.compatibility_score }}% Match
                 </div>
 
@@ -74,23 +67,16 @@
               <div class="p-4">
                 <div class="d-grid gap-3">
                   <!-- Adopt Button -->
-                  <button 
-                    v-if="isAuthenticated && !pet.is_adopted"
-                    class="btn btn-success btn-lg py-3 fw-bold"
-                    @click="startAdoption"
-                    :disabled="adopting"
-                  >
+                  <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success btn-lg py-3 fw-bold"
+                    @click="startAdoption" :disabled="adopting">
                     <span v-if="adopting" class="spinner-border spinner-border-sm me-2"></span>
                     <i v-else class="bi bi-heart me-2"></i>
                     {{ adopting ? 'Adopting...' : `Adopt ${pet.name}` }}
                   </button>
 
                   <!-- Login to Adopt -->
-                  <button 
-                    v-else-if="!isAuthenticated && !pet.is_adopted"
-                    class="btn btn-success btn-lg py-3 fw-bold"
-                    @click="$router.push('/login')"
-                  >
+                  <button v-else-if="!isAuthenticated && !pet.is_adopted" class="btn btn-success btn-lg py-3 fw-bold"
+                    @click="$router.push('/login')">
                     <i class="bi bi-person me-2"></i>Login to Adopt
                   </button>
 
@@ -101,13 +87,9 @@
                   </div>
 
                   <!-- Favorite Button -->
-                  <button 
-                    v-if="isAuthenticated"
-                    class="btn py-2"
-                    :class="isFavorite ? 'btn-danger' : 'btn-outline-primary'"
-                    @click="toggleFavorite"
-                    :disabled="favoriteLoading"
-                  >
+                  <button v-if="isAuthenticated" class="btn py-2"
+                    :class="isFavorite ? 'btn-danger' : 'btn-outline-primary'" @click="toggleFavorite"
+                    :disabled="favoriteLoading">
                     <i class="bi" :class="isFavorite ? 'bi-heart-fill' : 'bi-heart'"></i>
                     {{ favoriteLoading ? '...' : (isFavorite ? 'Remove from Favorites' : 'Add to Favorites') }}
                   </button>
@@ -224,11 +206,8 @@
                     <span class="compatibility-value">{{ pet.compatibility_score }}%</span>
                   </div>
                   <div class="progress" style="height: 8px;">
-                    <div 
-                      class="progress-bar" 
-                      :class="getCompatibilityClass(pet.compatibility_score)"
-                      :style="{ width: pet.compatibility_score + '%' }"
-                    ></div>
+                    <div class="progress-bar" :class="getCompatibilityClass(pet.compatibility_score)"
+                      :style="{ width: pet.compatibility_score + '%' }"></div>
                   </div>
                   <div class="compatibility-description mt-2">
                     <small class="text-muted">
@@ -318,39 +297,41 @@
                   </div>
                 </div>
               </div>
-                 <!--to add extra things here, such as HDB requirements -->
+              <!--to add extra things here, such as HDB requirements -->
               <div class="mt-4">
                 <h5 class="section-title mb-3">
                   <i class="bi bi-clipboard-check text-primary me-2"></i>Other Requirements
                 </h5>
                 <div class="care-item2">
-                      <span>Adoption Fee</span>
-                      <span class="status yes">${{ pet.adoption_fee || 'Free' }}</span>
+                  <span>Adoption Fee</span>
+                  <span class="status yes">${{ pet.adoption_fee || 'Free' }}</span>
                 </div>
                 <div class="care-requirements">
                   <div class="care-item2" v-if="pet.HDB_approved">
                     <i class="bi bi-building text-success"></i>
                     <span>{{ getHDBStatus() }}</span>
-                
+
                   </div>
                   <div class="care-item2" v-else>
                     <i class="bi bi-building text-danger"></i>
                     <span>{{ getHDBStatus() }}</span>
-                    
+
                   </div>
-                  
+
                   <div class="care-item2" v-if="pet.HDB_approved && pet.type === 'cat'">
                     <ul class="hdb-checklist">
-                      <li><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>HDB permits up to 2 cats per household</li>
-                      <li><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Windows and gates must be mashed up</li>
+                      <li><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>HDB permits up to 2 cats per
+                        household</li>
+                      <li><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Windows and gates must be
+                        mashed up</li>
                     </ul>
                   </div>
                   <div class="care-item2" v-if="pet.type === 'dog'">
-                      <span> HDB regulations permit only one dog per flat</span>
+                    <span> HDB regulations permit only one dog per flat</span>
                   </div>
 
                 </div>
-                
+
               </div>
             </div>
           </div>
@@ -378,7 +359,7 @@ export default {
       imageCache: new Map(),
       allDogBreeds: [],
       allCatBreeds: [],
-      HDB_approved:null
+      HDB_approved: null
     }
   },
   async mounted() {
@@ -413,7 +394,7 @@ export default {
     async loadPetDetails() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         // get petID from the URL
         const petId = this.$route.params.petId;
@@ -423,7 +404,7 @@ export default {
         const headers = {
           'Content-Type': 'application/json'
         };
-        
+
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
         }
@@ -431,7 +412,7 @@ export default {
         // Try to get pet with compatibility scores if authenticated and quiz completed + fetch pet data from API
         let url = `${API_BASE_URL}/pets/${petId}`;
         let response = await fetch(url, { headers });
-        
+
         if (!response.ok && this.isAuthenticated) {
           // If regular endpoint fails and user is authenticated, try with scores
           const allPetsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, { headers });
@@ -480,7 +461,7 @@ export default {
           imageLoaded: false,
           placeholderImage: true
         };
-        
+
         // Try to fetch API image for this pet
         await this.fetchApiImageForPet(processedPet);
         return processedPet;
@@ -489,7 +470,7 @@ export default {
 
     async fetchApiImageForPet(pet) {
       if (!pet.placeholderImage) return;
-      
+
       try {
         const apiImage = await this.fetchPetImage(pet);
         if (apiImage) {
@@ -507,24 +488,24 @@ export default {
       if (this.imageCache.has(cacheKey)) {
         return this.imageCache.get(cacheKey);
       }
-      
+
       try {
         const breedId = this.findBreedId(pet.breed, pet.type);
-        const apiUrl = pet.type === "dog" 
+        const apiUrl = pet.type === "dog"
           ? `${API_BASE_URL}/external/dog-images`
           : `${API_BASE_URL}/external/cat-images`;
-        
+
         const params = new URLSearchParams({ limit: "1" });
         if (breedId) params.append("breed_id", breedId);
-        
+
         const token = localStorage.getItem('authToken');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const response = await fetch(`${apiUrl}?${params}`, { headers });
-        
+
         if (!response.ok) throw new Error(`API error: ${response.status}`);
-        
+
         const data = await response.json();
         if (data && data.length > 0 && data[0].url) {
           const imageUrl = data[0].url;
@@ -541,7 +522,7 @@ export default {
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
       if (!breeds.length) return null;
-      const breed = breeds.find(b => 
+      const breed = breeds.find(b =>
         b.name.toLowerCase().includes(breedName.toLowerCase()) ||
         breedName.toLowerCase().includes(b.name.toLowerCase())
       );
@@ -553,12 +534,12 @@ export default {
         const token = localStorage.getItem('authToken');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const [dogResponse, catResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
           fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
         ]);
-        
+
         if (dogResponse.ok && catResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
           this.allCatBreeds = await catResponse.json();
@@ -576,7 +557,7 @@ export default {
       const typeColors = colors[pet.type] || colors.dog;
       const color = typeColors[pet.id % typeColors.length];
       const emoji = pet.type === 'dog' ? '🐕' : '🐱';
-      
+
       return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect fill='${color}' width='400' height='300'/%3E%3Ctext fill='%23666' font-size='48' font-family='system-ui' x='200' y='150' text-anchor='middle' dominant-baseline='middle'%3E${emoji}%3C/text%3E%3Ctext fill='%23333' font-size='24' font-family='system-ui' x='200' y='200' text-anchor='middle'%3E${pet.name}%3C/text%3E%3C/svg%3E`;
     },
 
@@ -600,7 +581,7 @@ export default {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         this.hasCompletedQuiz = response.ok;
       } catch (error) {
         console.log('No quiz results found');
@@ -694,7 +675,7 @@ export default {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       `;
       document.body.appendChild(toast);
-      
+
       // Auto remove after 5 seconds
       setTimeout(() => {
         if (toast.parentNode) {
@@ -706,7 +687,7 @@ export default {
     getActivityClass(activity) {
       const activityMap = {
         'low': 'bg-secondary text-white',
-        'medium': 'bg-warning text-dark', 
+        'medium': 'bg-warning text-dark',
         'high': 'bg-success text-white'
       };
       return activityMap[activity] || 'bg-info text-white';
@@ -754,9 +735,9 @@ export default {
     },
     getHDBStatus() {
       return this.pet.HDB_approved ? "HDB approved" : "Not HDB approved";
-}
+    }
   }
-    
+
 }
 </script>
 
@@ -764,7 +745,7 @@ export default {
 .pet-profile-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 1rem 0;
+  padding: 1rem 0 0 0;
 }
 
 /* Image Container */
@@ -889,6 +870,8 @@ export default {
   font-size: 2rem;
   font-weight: 700;
   background: linear-gradient(135deg, #667eea, #764ba2);
+  /* added line below to prevent error */
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   line-height: 1;
@@ -925,6 +908,7 @@ export default {
   font-style: italic;
   color: #666;
 }
+
 .background-story-card {
   background: linear-gradient(135deg, #e6f0ff, #cce0ff);
   padding: 1.5rem;
@@ -995,6 +979,7 @@ export default {
   border-radius: 8px;
   border-left: 4px solid #4ECDC4;
 }
+
 .care-item2 {
   display: flex;
   align-items: center;
@@ -1038,11 +1023,11 @@ export default {
   .pet-name {
     font-size: 1.75rem;
   }
-  
+
   .pet-image {
     height: 280px;
   }
-  
+
   .compatibility-score {
     margin-top: 1rem;
   }
@@ -1052,35 +1037,38 @@ export default {
   .container {
     padding: 0 10px;
   }
-  
+
   .pet-image {
     height: 250px;
   }
-  
+
   .btn-lg {
     padding: 0.75rem 1rem;
     font-size: 1rem;
   }
+
   .hdb-checklist {
-  list-style: none!important; /* remove default bullets */
-  padding-left: 0;
-  margin: 0;
-}
+    list-style: none !important;
+    /* remove default bullets */
+    padding-left: 0;
+    margin: 0;
+  }
 
-.hdb-checklist li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem; /* space between icon and text */
-  background: #f8f9fa;
-  padding: 8px 12px;
-  border-left: 4px solid #ffc107; /* yellow accent like warning */
-  border-radius: 6px;
-  margin-bottom: 6px;
-  font-weight: 500;
-  font-size: 0.95rem;
-  
-}
+  .hdb-checklist li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    /* space between icon and text */
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-left: 4px solid #ffc107;
+    /* yellow accent like warning */
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 0.95rem;
 
+  }
 
 }
 </style>
