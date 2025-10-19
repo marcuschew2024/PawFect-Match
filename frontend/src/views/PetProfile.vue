@@ -29,7 +29,7 @@
       <div v-else-if="pet" class="row g-4">
         <!-- Left Column - Pet Image & Actions -->
         <div class="col-xl-5 col-lg-6">
-          <div class="card shadow-sm border-0">
+          <div class="card shadow-sm border-0 sticky-card">
             <div class="card-body p-0">
               <div class="pet-image-container position-relative">
                 <img :src="pet.displayImage" :alt="pet.name" class="card-img-top pet-image"
@@ -742,6 +742,13 @@ export default {
 </script>
 
 <style scoped>
+
+.sticky-card {
+  position: sticky;
+  top: 20px;
+  align-self: flex-start;
+}
+
 .pet-profile-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8f9fa 0%, #f2f5f8 100%);
