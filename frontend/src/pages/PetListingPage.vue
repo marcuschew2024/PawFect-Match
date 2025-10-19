@@ -170,25 +170,6 @@
               <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
                 <i class="bi me-1"></i>View More
               </button>
-              <!-- Adoption Button -->
-              <!-- <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
-                <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
-              </button>
-
-              <button v-else-if="pet.is_adopted" class="btn btn-secondary" disabled>
-                <i class="bi bi-check-circle me-1"></i>Already Adopted
-              </button> -->
-
-              <!-- Favorite Buttons -->
-              <!-- <button v-if="isAuthenticated && !pet.is_favorite" class="btn btn-outline-primary btn-sm"
-                @click="toggleFavorite(pet)">
-                <i class="bi bi-heart me-1"></i>Add to Favorites
-              </button>
-              <button v-else-if="isAuthenticated && pet.is_favorite" class="btn btn-outline-danger btn-sm"
-                @click="toggleFavorite(pet)">
-                <i class="bi bi-heart-fill me-1"></i>Remove Favorite
-              </button> -->
-
             </div>
           </div>
         </div>
