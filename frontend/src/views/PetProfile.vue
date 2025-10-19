@@ -744,7 +744,7 @@ export default {
 <style scoped>
 .pet-profile-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, #f8f9fa 0%, #f2f5f8 100%);
   padding: 1rem 0 0 0;
 }
 
