@@ -477,16 +477,19 @@ export default {
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #28a745, #20c997);
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
   border: none;
+  padding: 12px 25px;
   font-weight: 600;
-  padding: 1rem 2rem;
+  transition: all 0.3s ease;
 }
 
 .btn-success:hover:not(:disabled) {
-  background: linear-gradient(135deg, #218838, #1e9c7a);
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
 }
 
 .btn-success:disabled {
