@@ -170,7 +170,6 @@
               <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
                 <i class="bi me-1"></i>View More
               </button>
-
               <!-- Adoption Button -->
               <!-- <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
                 <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
@@ -189,7 +188,7 @@
                 @click="toggleFavorite(pet)">
                 <i class="bi bi-heart-fill me-1"></i>Remove Favorite
               </button> -->
-              
+
             </div>
           </div>
         </div>
@@ -664,7 +663,7 @@ export default {
 
 .favorite-btn {
   position: absolute;
-  top: 12px;
+  bottom: 12px;
   right: 12px;
   background: rgba(255, 255, 255, 0.95);
   border: none;
@@ -703,7 +702,7 @@ export default {
   font-size: 0.7rem;
   font-weight: 500;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: 12px;
   border: 1px solid var(--border-light);
   z-index: 3;
 }
@@ -780,7 +779,7 @@ export default {
 .btn-pink {
   background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
   color: white;
-  border: none;
+  border: none !important;
   padding: 12px 25px;
   font-weight: 600;
   transition: all 0.3s ease;
