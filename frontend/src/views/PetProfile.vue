@@ -131,12 +131,12 @@
                   </span>
                 </div>
 
-                <div v-if="hasCompletedQuiz && pet.compatibility_score" class="text-end">
+                <!-- <div v-if="hasCompletedQuiz && pet.compatibility_score" class="text-end">
                   <div class="compatibility-score">
                     <div class="score-value">{{ pet.compatibility_score }}%</div>
                     <div class="score-label">Match</div>
                   </div>
-                </div>
+                </div> -->
               </div>
 
               <!-- Basic Information Grid -->
@@ -399,73 +399,161 @@ export default {
     },
   },
   methods: {
+    // async initializePage() {
+    //   this.checkAuth();
+    //   await this.loadAllBreeds();
+    //   await this.loadPetDetails();
+    //   if (this.isAuthenticated) {
+    //     await Promise.all([this.checkQuizCompletion(), this.checkFavoriteStatus()]);
+    //   }
+    // },
     async initializePage() {
       this.checkAuth();
       await this.loadAllBreeds();
-      await this.loadPetDetails();
+      
+      // Check quiz completion FIRST if authenticated
       if (this.isAuthenticated) {
-        await Promise.all([this.checkQuizCompletion(), this.checkFavoriteStatus()]);
+        await this.checkQuizCompletion();
+      }
+      
+      // NOW load pet details (it can use hasCompletedQuiz correctly)
+      await this.loadPetDetails();
+      
+      // Check favorite status
+      if (this.isAuthenticated) {
+        await this.checkFavoriteStatus();
       }
     },
+
+
 
     checkAuth() {
       const token = localStorage.getItem("authToken");
       this.isAuthenticated = !!token;
     },
 
+    // async loadPetDetails() {
+    //   this.loading = true;
+    //   this.error = null;
+
+    //   try {
+    //     // get petID from the URL
+    //     const petId = this.$route.params.petId;
+    //     console.log("Loading pet details for ID:", petId);
+    //     // If user has logged in, they would be sent to the login page
+    //     const token = localStorage.getItem("authToken");
+    //     const headers = {
+    //       "Content-Type": "application/json",
+    //     };
+
+    //     if (token) {
+    //       headers["Authorization"] = `Bearer ${token}`;
+    //     }
+
+    //     // Try to get pet with compatibility scores if authenticated and quiz completed + fetch pet data from API
+    //     let url = `${API_BASE_URL}/pets/${petId}`;
+    //     let response = await fetch(url, { headers });
+
+    //     if (!response.ok && this.isAuthenticated) {
+    //       // If regular endpoint fails and user is authenticated, try with scores
+    //       const allPetsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, { headers });
+    //       if (allPetsResponse.ok) {
+    //         const allPets = await allPetsResponse.json();
+    //         const specificPet = allPets.find((p) => p.id === parseInt(petId));
+    //         if (specificPet) {
+    //           this.pet = await this.processPetWithImages(specificPet);
+    //           this.loading = false;
+    //           return;
+    //         }
+    //       }
+    //     }
+
+    //     if (response.ok) {
+    //       const petData = await response.json();
+    //       this.pet = await this.processPetWithImages(petData);
+    //       console.log("Pet data loaded with images:", this.pet);
+    //     } else if (response.status === 404) {
+    //       this.error = "Pet not found.";
+    //     } else {
+    //       const errorData = await response.json().catch(() => ({}));
+    //       this.error = errorData.error || "Error loading pet details.";
+    //     }
+    //   } catch (error) {
+    //     console.error("Error loading pet:", error);
+    //     this.error = "Network error. Please try again.";
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
     async loadPetDetails() {
       this.loading = true;
       this.error = null;
 
       try {
-        // get petID from the URL
         const petId = this.$route.params.petId;
         console.log("Loading pet details for ID:", petId);
-        // If user has logged in, they would be sent to the login page
+        
         const token = localStorage.getItem("authToken");
         const headers = {
           "Content-Type": "application/json",
         };
 
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
 
-        // Try to get pet with compatibility scores if authenticated and quiz completed + fetch pet data from API
-        let url = `${API_BASE_URL}/pets/${petId}`;
-        let response = await fetch(url, { headers });
-
-        if (!response.ok && this.isAuthenticated) {
-          // If regular endpoint fails and user is authenticated, try with scores
-          const allPetsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, { headers });
-          if (allPetsResponse.ok) {
-            const allPets = await allPetsResponse.json();
-            const specificPet = allPets.find((p) => p.id === parseInt(petId));
-            if (specificPet) {
-              this.pet = await this.processPetWithImages(specificPet);
-              this.loading = false;
-              return;
-            }
+    //If authenticated AND has completed quiz, try to get scores first
+    if (this.isAuthenticated && this.hasCompletedQuiz) {
+      console.log("✅ User is authenticated and has completed quiz - fetching with scores");
+      
+      try {
+        const allPetsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, { headers });
+        
+        if (allPetsResponse.ok) {
+          const allPets = await allPetsResponse.json();
+          console.log("📊 Fetched pets with scores:", allPets.length);
+          
+          const specificPet = allPets.find((p) => p.id === parseInt(petId));
+          
+          if (specificPet) {
+            console.log("✅ Found pet with compatibility score:", specificPet.compatibility_score);
+            this.pet = await this.processPetWithImages(specificPet);
+            this.loading = false;
+            return; // SUCCESS - exit here
+          } else {
+            console.log("⚠️ Pet not found in scored list, falling back to regular endpoint");
           }
-        }
-
-        if (response.ok) {
-          const petData = await response.json();
-          this.pet = await this.processPetWithImages(petData);
-          console.log("Pet data loaded with images:", this.pet);
-        } else if (response.status === 404) {
-          this.error = "Pet not found.";
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          this.error = errorData.error || "Error loading pet details.";
+          console.log("⚠️ Failed to fetch scored pets:", allPetsResponse.status);
         }
       } catch (error) {
-        console.error("Error loading pet:", error);
-        this.error = "Network error. Please try again.";
-      } finally {
-        this.loading = false;
+        console.log("⚠️ Error fetching scored pets:", error);
       }
-    },
+    } else {
+      console.log("ℹ️ User not authenticated or no quiz - using regular endpoint");
+    }
+
+    // FALLBACK: Use regular endpoint (without scores)
+    console.log("📡 Fetching pet from regular endpoint");
+    const response = await fetch(`${API_BASE_URL}/pets/${petId}`, { headers });
+
+    if (response.ok) {
+      const petData = await response.json();
+      console.log("✅ Pet data loaded (no score):", petData.name);
+      this.pet = await this.processPetWithImages(petData);
+    } else if (response.status === 404) {
+      this.error = "Pet not found.";
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      this.error = errorData.error || "Error loading pet details.";
+    }
+  } catch (error) {
+    console.error("❌ Error loading pet:", error);
+    this.error = "Network error. Please try again.";
+  } finally {
+    this.loading = false;
+  }
+},
 
     async processPetWithImages(pet) {
       // Use the same image processing logic as PetListingPage
