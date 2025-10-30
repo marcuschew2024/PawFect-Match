@@ -11,6 +11,7 @@ import LifestyleQuiz from '../pages/LifestyleQuiz.vue'
 import FavoritesPage from '../pages/FavoritesPage.vue'
 import ProfilePage from '../pages/ProfilePage.vue'
 import AdoptionFormPage from '../pages/AdoptionFormPage.vue'
+import CommunityPage from '../pages/CommunityPage.vue' 
 
 const routes = [
   {
@@ -29,6 +30,13 @@ const routes = [
     name: 'About',
     component: AboutPage
     // No meta - public access
+  },
+  {
+    path: '/community', 
+    name: 'Community',
+    component: CommunityPage
+    // No meta - public access
+
   },
   {
     path: '/add-pet',  // Changed from /add-adoption

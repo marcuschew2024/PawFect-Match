@@ -24,8 +24,18 @@
             <li class="nav-item" v-if="isAuthenticated">
               <router-link to="/add-pet" class="nav-link">List a Pet</router-link>
             </li>
+<<<<<<< Updated upstream
             
             
+=======
+            <li class="nav-item">
+              <router-link to="/community" class="nav-link">
+                Community
+              </router-link>
+            </li>
+
+
+>>>>>>> Stashed changes
             <!-- Authentication Section -->
             <li class="nav-item dropdown" v-if="!isAuthenticated">
               <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">

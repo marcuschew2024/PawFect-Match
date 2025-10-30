@@ -272,6 +272,8 @@ export default {
         if (response.ok) {
           this.userProfile = await response.json();
           this.hasCompletedQuiz = true;
+          console.log("Has completed quiz:", this.hasCompletedQuiz);
+          console.log(this.userProfile);
         }
       } catch (error) {
         console.log('No quiz results found');
