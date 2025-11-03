@@ -818,13 +818,7 @@ def health_check():
     })
 
 
-# Add these corrected forum routes to your app.py
-# Replace all the forum routes starting from line 753
-
-# ==========================================================
-# FORUM ROUTES - COMPLETE IMPLEMENTATION
-# ==========================================================
-
+#forum
 # Get all questions with answers and user info
 @app.route('/api/forum/questions', methods=['GET'])
 

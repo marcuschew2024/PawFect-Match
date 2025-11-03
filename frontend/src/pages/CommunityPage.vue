@@ -1,161 +1,210 @@
 <template>
   <div class="container my-5">
-    <h2 class="text-center mb-4">Community Forum</h2>
-
-    <!-- New Question Form -->
-    <div v-if="user" class="card mb-4 shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">Ask a New Question</h5>
-        <div class="mb-3">
-          <input
-            v-model="newQuestion.title"
-            type="text"
-            class="form-control"
-            placeholder="Enter your question title"
-          />
-        </div>
-        <div class="mb-3">
-          <textarea
-            v-model="newQuestion.content"
-            class="form-control"
-            placeholder="Describe your question in detail..."
-            rows="4"
-          ></textarea>
-        </div>
-        <div class="mb-3">
-          <select v-model="newQuestion.category" class="form-select">
-            <option disabled value="">Select Category</option>
-            <option value="general">General</option>
-            <option value="health">Health</option>
-            <option value="training">Training</option>
-            <option value="adoption">Adoption</option>
-            <option value="nutrition">Nutrition</option>
-          </select>
-        </div>
-        <button @click="createQuestion" class="btn btn-primary" :disabled="posting">
-          <span v-if="posting" class="spinner-border spinner-border-sm me-2"></span>
-          {{ posting ? 'Posting...' : 'Post Question' }}
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">Community Forum</h1>
+      <div v-if="isAuthenticated" class="d-flex gap-2">
+        <button class="btn btn-primary" @click="openQuestionModal">
+          <i class="bi bi-pencil-square me-2"></i>Ask a Question
         </button>
       </div>
     </div>
 
-    <!-- Login message for non-authenticated users -->
-    <div v-else class="alert alert-info text-center">
-      Please <router-link to="/login">login</router-link> to ask questions and post answers.
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <p class="mt-2">Loading questions...</p>
-    </div>
-
-    <!-- Forum Questions -->
-    <div v-else-if="questions.length" class="accordion" id="forumAccordion">
-      <div
-        class="accordion-item"
-        v-for="question in questions"
-        :key="question.id"
-      >
-        <h2 class="accordion-header" :id="'heading' + question.id">
-          <button
-            class="accordion-button collapsed"
-            type="button"
-            data-bs-toggle="collapse"
-            :data-bs-target="'#collapse' + question.id"
-            aria-expanded="false"
-            :aria-controls="'collapse' + question.id"
-          >
-            <div class="w-100 d-flex justify-content-between align-items-center">
-              <div>
-                <strong>{{ question.title }}</strong>
-                <span class="badge bg-secondary ms-2">{{ question.category }}</span>
-              </div>
-              <div>
-                <span class="text-muted small">{{ formatDate(question.createdAt || question.created_at) }}</span>
-              </div>
-            </div>
-          </button>
-        </h2>
-
-        <div
-          :id="'collapse' + question.id"
-          class="accordion-collapse collapse"
-          :aria-labelledby="'heading' + question.id"
-          data-bs-parent="#forumAccordion"
-        >
-          <div class="accordion-body">
-            <p>{{ question.content }}</p>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <button
-                class="btn btn-outline-primary btn-sm"
-                @click="toggleLikeQuestion(question)"
-                :disabled="!user"
-              >
-                👍 {{ question.likes }}
-              </button>
-              <span class="text-muted small">
-                Asked by {{ question.author || 'Anonymous' }}
-              </span>
-            </div>
-
-            <!-- Answers Section -->
-            <div class="answers">
-              <h6>Answers ({{ question.answers ? question.answers.length : 0 }}):</h6>
-              <div v-if="question.answers && question.answers.length">
-                <div
-                  v-for="answer in question.answers"
-                  :key="answer.id"
-                  class="border rounded p-2 mb-2 bg-light"
-                >
-                  <p class="mb-1">{{ answer.content }}</p>
-                  <div class="d-flex justify-content-between">
-                    <button
-                      class="btn btn-sm btn-outline-success"
-                      @click="likeAnswer(answer)"
-                      :disabled="!user"
-                    >
-                      👍 {{ answer.likes }}
-                    </button>
-                    <span class="text-muted small">
-                      by {{ answer.author || 'Anonymous' }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <p v-else class="text-muted">No answers yet. Be the first to answer!</p>
-
-              <!-- Add Answer Form -->
-              <div v-if="user" class="mt-3">
-                <textarea
-                  v-model="newAnswers[question.id]"
-                  class="form-control mb-2"
-                  placeholder="Write your answer..."
-                  rows="3"
-                ></textarea>
-                <button
-                  @click="addAnswer(question.id)"
-                  class="btn btn-sm btn-primary"
-                  :disabled="!newAnswers[question.id] || postingAnswer"
-                >
-                  <span v-if="postingAnswer" class="spinner-border spinner-border-sm me-2"></span>
-                  {{ postingAnswer ? 'Posting...' : 'Post Answer' }}
-                </button>
-              </div>
-              <div v-else class="mt-3 text-muted small">
-                Please login to answer this question.
-              </div>
-            </div>
+    <!-- Filters -->
+    <div class="filter-section mb-4">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+          <label for="searchInput" class="form-label">SEARCH QUESTIONS</label>
+          <input type="text" class="form-control" id="searchInput" v-model="searchTerm"
+                 placeholder="Search by title or content..." autocomplete="off">
+        </div>
+        <div class="col-md-3">
+          <label for="categoryFilter" class="form-label">CATEGORY</label>
+          <select class="form-select" id="categoryFilter" v-model="filters.category">
+            <option value="all">All Categories</option>
+            <option v-for="cat in categories" :key="cat.value" :value="cat.value">
+                {{ cat.label }}
+            </option>
+         </select>
+        </div>
+        <div class="col-md-3">
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary flex-fill" @click="applyFilters">
+              <i class="bi bi-funnel me-2"></i>APPLY FILTERS
+            </button>
+            <button class="btn btn-outline-secondary" @click="resetFilters">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <p v-else class="text-center text-muted mt-5">
-      No questions yet. Be the first to post!
-    </p>
+    <!-- Questions Grid -->
+    <div v-if="loading" class="text-center py-5">
+      <i class="bi bi-arrow-repeat spinner me-2"></i>Loading community posts...
+    </div>
+
+    <div v-else-if="error" class="text-center text-danger py-5">
+      <i class="bi bi-exclamation-triangle display-5"></i>
+      <p class="mt-3">{{ error }}</p>
+      <button class="btn btn-primary" @click="fetchQuestions">
+        Try Again
+      </button>
+    </div>
+
+    <div v-else-if="filteredQuestions.length === 0" class="text-center py-5 text-muted">
+      <i class="bi bi-chat-left-text display-5"></i>
+      <p class="mt-3">No discussions found matching your filters.</p>
+    </div>
+
+    <div v-else class="row mt-4">
+      <div v-for="question in filteredQuestions" :key="question.id" class="col-12 mb-4">
+        <div class="card question-card">
+          <div class="card-body">
+            <h5 class="card-title">{{ question.title }}</h5>
+            <p class="card-text text-muted mb-3">{{ truncateContent(question.content) }}</p>
+
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <small class="text-muted">
+                  <i class="bi bi-person-circle me-1"></i>{{ question.author }} • 
+                  <i class="bi bi-calendar3 me-1"></i>{{ formatDate(question.createdAt) }}
+                </small>
+              </div>
+              <div>
+                <span class="badge bg-light text-dark me-2">{{ question.category }}</span>
+                <span class="badge bg-primary">{{ question.answers.length }} Answers</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer bg-transparent d-flex justify-content-between">
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-primary btn-sm" @click="openQuestionDetail(question.id)">
+                <i class="bi bi-eye me-1"></i>View Discussion
+              </button>
+              <button v-if="isAuthenticated" class="btn btn-outline-success btn-sm" 
+                      @click="openQuestionDetail(question.id, true)">
+                <i class="bi bi-reply me-1"></i>Answer
+              </button>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" @click="toggleQuestionLike(question)">
+              <i :class="question.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
+              {{ question.likes }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Question Detail Modal -->
+    <div v-if="showModal" class="modal-overlay" @click="closeModal">
+      <div class="modal-container" @click.stop>
+        <div class="modal-header">
+          <h3>{{ selectedQuestion?.title }}</h3>
+          <button class="btn-close" @click="closeModal">&times;</button>
+        </div>
+
+        <div class="modal-body" v-if="selectedQuestion">
+          <div class="mb-3">
+            <small class="text-muted">
+              <i class="bi bi-person-circle me-1"></i>{{ selectedQuestion.author }} • 
+              {{ formatDate(selectedQuestion.createdAt) }}
+            </small>
+            <span class="badge bg-light text-dark ms-2">{{ selectedQuestion.category }}</span>
+          </div>
+          <p class="question-content">{{ selectedQuestion.content }}</p>
+
+          <div class="mt-3">
+            <button v-if="isAuthenticated" class="btn btn-success mb-3" @click="showAnswerForm = !showAnswerForm">
+              <i class="bi bi-reply me-2"></i>{{ showAnswerForm ? 'Cancel' : 'Answer this Question' }}
+            </button>
+
+            <div v-if="showAnswerForm" class="mb-4">
+              <textarea class="form-control mb-2" v-model="newAnswerContent" rows="3" placeholder="Write your answer..."></textarea>
+              <button class="btn btn-primary" @click="submitAnswer">Submit Answer</button>
+            </div>
+          </div>
+
+          <hr>
+
+          <h5 class="mb-3">
+            <i class="bi bi-chat-left-text me-2"></i>
+            Answers ({{ selectedQuestion.answers.length }})
+          </h5>
+
+          <div v-if="selectedQuestion.answers.length === 0" class="text-muted text-center py-4">
+            <i class="bi bi-inbox display-6"></i>
+            <p class="mt-2">No answers yet. Be the first to help!</p>
+          </div>
+
+          <div class="answers-list">
+            <div v-for="answer in selectedQuestion.answers" :key="answer.id" class="answer-card">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <small class="text-muted">
+                    <i class="bi bi-person-circle me-1"></i>{{ answer.author }} • 
+                    {{ formatDate(answer.createdAt) }}
+                  </small>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-danger btn-sm" v-if="answer.author_id === currentUserId"
+                          @click="deleteAnswer(answer.id)">
+                    Delete
+                  </button>
+                  <button class="btn btn-outline-primary btn-sm" @click="toggleAnswerLike(answer)">
+                    <i :class="answer.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
+                    {{ answer.likes }}
+                  </button>
+                </div>
+              </div>
+              <p class="answer-content">{{ answer.content }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="closeModal">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ask Question Modal -->
+    <div v-if="showQuestionModal" class="modal-overlay" @click="closeQuestionModal">
+      <div class="modal-container" @click.stop>
+        <div class="modal-header">
+          <h3>Ask a Question</h3>
+          <button class="btn-close" @click="closeQuestionModal">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" class="form-control" v-model="newQuestion.title">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Category</label>
+           <select class="form-select" v-model="newQuestion.category" required>
+                <option disabled value="">Select a category</option>
+                <option v-for="cat in categories" :key="cat.value" :value="cat.value">
+                    {{ cat.label }}
+                </option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Content</label>
+            <textarea class="form-control" v-model="newQuestion.content" rows="5"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="closeQuestionModal">Cancel</button>
+          <button class="btn btn-primary" @click="submitQuestion">Submit</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -163,83 +212,252 @@
 const API_BASE_URL = 'http://localhost:3000/api';
 
 export default {
-  name: "CommunityPage",
+  name: 'CommunityPage',
   data() {
     return {
-      user: null,
       questions: [],
-      newQuestion: {
-        title: "",
-        content: "",
-        category: "",
-      },
-      newAnswers: {},
-      loading: false,
-      posting: false,
-      postingAnswer: false,
+      filteredQuestions: [],
+      filters: { category: 'all' },
+     categories: [
+    { label: 'General', value: 'general' },
+    { label: 'Health', value: 'health' },
+    { label: 'Training', value: 'training' },
+    { label: 'Adoption', value: 'adoption' },
+    { label: 'Nutrition', value: 'nutrition' }],
+      searchTerm: '',
+      loading: true,
+      error: null,
+      isAuthenticated: false,
+      currentUserId: null,
+
+      // Question detail modal
+      showModal: false,
+      selectedQuestion: null,
+      showAnswerForm: false,
+      newAnswerContent: '',
+
+      // Ask question modal
+      showQuestionModal: false,
+      newQuestion: { title: '', content: '', category: 'Adoption' }
     };
   },
-  mounted() {
+  async mounted() {
     this.checkAuth();
-    this.fetchQuestions();
+    await this.fetchQuestions();
   },
   methods: {
     checkAuth() {
-      // Check if user is logged in
-      const token = localStorage.getItem("authToken");
-      const userData = localStorage.getItem("user");
-      
-      if (token && userData) {
-        try {
-          this.user = JSON.parse(userData);
-        } catch (e) {
-          console.error("Error parsing user data:", e);
-          this.user = null;
-        }
-      } else {
-        this.user = null;
-      }
+      const token = localStorage.getItem('authToken');
+      this.isAuthenticated = !!token;
+      this.currentUserId = token ? parseInt(localStorage.getItem('userId')) : null;
     },
 
+    // -------------------------------
+    // Fetch questions
+    // -------------------------------
     async fetchQuestions() {
       this.loading = true;
+      this.error = null;
+
       try {
-        const response = await fetch(`${API_BASE_URL}/forum/questions`);
-        
-        if (response.ok) {
-          this.questions = await response.json();
-          console.log("Questions loaded:", this.questions);
-        } else {
-          console.error("Failed to fetch questions:", response.status);
-          this.showToast("Failed to load questions", "error");
-        }
+        const params = new URLSearchParams();
+        if (this.filters.category !== 'all') params.append('category', this.filters.category);
+        if (this.searchTerm) params.append('search', this.searchTerm);
+
+        const response = await fetch(`${API_BASE_URL}/forum/questions?${params.toString()}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const data = await response.json();
+        this.questions = data.map(q => ({ ...q, liked: false })); // default like false
+        this.filteredQuestions = [...this.questions];
       } catch (err) {
-        console.error("Error fetching questions:", err);
-        this.showToast("Network error loading questions", "error");
+        console.error('Error fetching forum questions:', err);
+        this.error = err.message;
       } finally {
         this.loading = false;
       }
     },
 
-    async createQuestion() {
-      // Validate inputs
-      if (!this.newQuestion.title.trim()) {
-        this.showToast("Please enter a question title", "error");
-        return;
+    applyFilters() {
+      this.filteredQuestions = this.questions.filter(q => {
+        const matchesSearch = !this.searchTerm ||
+          q.title.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+          q.content.toLowerCase().includes(this.searchTerm.toLowerCase());
+
+        const matchesCategory = this.filters.category === 'all' || q.category === this.filters.category;
+        return matchesSearch && matchesCategory;
+      });
+    },
+
+    resetFilters() {
+      this.searchTerm = '';
+      this.filters.category = 'all';
+      this.filteredQuestions = [...this.questions];
+    },
+
+    truncateContent(text, length = 120) {
+      if (!text) return '';
+      return text.length > length ? text.substring(0, length) + '...' : text;
+    },
+
+    formatDate(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    },
+
+    // -------------------------------
+    // Question Detail Modal
+    // -------------------------------
+    async openQuestionDetail(id, autoOpenAnswer = false) {
+      try {
+        const question = this.questions.find(q => q.id === id);
+        if (question) {
+          this.selectedQuestion = question;
+        } else {
+          const res = await fetch(`${API_BASE_URL}/forum/questions/${id}`);
+          if (!res.ok) throw new Error('Failed to fetch question detail');
+          this.selectedQuestion = await res.json();
+        }
+        this.showModal = true;
+        this.showAnswerForm = autoOpenAnswer;
+        this.newAnswerContent = '';
+      } catch (err) {
+        console.error(err);
+        alert('Unable to open question.');
       }
-      if (!this.newQuestion.content.trim()) {
-        this.showToast("Please enter question details", "error");
-        return;
+    },
+
+    closeModal() {
+      this.showModal = false;
+      this.selectedQuestion = null;
+      this.showAnswerForm = false;
+      this.newAnswerContent = '';
+    },
+
+    // -------------------------------
+    // Answer
+    // -------------------------------
+    async submitAnswer() {
+  if (!this.newAnswerContent.trim()) {
+    alert('Answer cannot be empty.');
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`${API_BASE_URL}/forum/questions/${this.selectedQuestion.id}/answers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ content: this.newAnswerContent })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || 'Failed to submit answer');
+    }
+
+    const newAnswer = await res.json();
+
+    
+    this.selectedQuestion.answers.push(newAnswer);
+    console.log("Answer submitted successfully");
+
+    this.newAnswerContent = '';
+    this.showAnswerForm = false;
+
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+},
+
+
+    async deleteAnswer(answerId) {
+      if (!confirm('Are you sure you want to delete this answer?')) return;
+
+      try {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE_URL}/forum/answers/${answerId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('Failed to delete answer');
+
+        // Remove locally
+        this.selectedQuestion.answers = this.selectedQuestion.answers.filter(a => a.id !== answerId);
+        const questionIndex = this.questions.findIndex(q => q.id === this.selectedQuestion.id);
+        if (questionIndex >= 0) {
+          this.questions[questionIndex].answers = this.questions[questionIndex].answers.filter(a => a.id !== answerId);
+        }
+      } catch (err) {
+        console.error(err);
+        alert(err.message);
       }
-      if (!this.newQuestion.category) {
-        this.showToast("Please select a category", "error");
+    },
+
+    // -------------------------------
+    // Like/Unlike Question
+    // -------------------------------
+    async toggleQuestionLike(question) {
+      try {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE_URL}/forum/questions/${question.id}/like`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('Failed to like/unlike question');
+
+        const data = await res.json();
+        question.liked = data.liked;
+        question.likes = data.likes;
+      } catch (err) {
+        console.error(err);
+        alert(err.message);
+      }
+    },
+
+    async toggleAnswerLike(answer) {
+      try {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE_URL}/forum/answers/${answer.id}/like`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('Failed to like/unlike answer');
+
+        const data = await res.json();
+        answer.liked = data.liked;
+        answer.likes = data.likes;
+      } catch (err) {
+        console.error(err);
+        alert(err.message);
+      }
+    },
+
+    // -------------------------------
+    // Ask Question Modal
+    // -------------------------------
+    openQuestionModal() { this.showQuestionModal = true; },
+    closeQuestionModal() {
+      this.showQuestionModal = false;
+      this.newQuestion = { title: '', content: '', category: 'Adoption' };
+    },
+
+    async submitQuestion() {
+      if (!this.newQuestion.title.trim() || !this.newQuestion.content.trim() || !this.newQuestion.category) {
+        alert('All fields are required.');
         return;
       }
 
-      this.posting = true;
       try {
-        const token = localStorage.getItem("authToken");
-        const response = await fetch(`${API_BASE_URL}/forum/questions`, {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE_URL}/forum/questions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -248,208 +466,180 @@ export default {
           body: JSON.stringify(this.newQuestion)
         });
 
-        if (response.ok) {
-          this.newQuestion = { title: "", content: "", category: "" };
-          this.showToast("Question posted successfully!", "success");
-          await this.fetchQuestions();
-        } else {
-          const error = await response.json();
-          this.showToast(error.error || "Failed to post question", "error");
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || 'Failed to submit question');
         }
+
+        const createdQuestion = await res.json();
+        this.questions.unshift(createdQuestion);
+        this.filteredQuestions.unshift(createdQuestion);
+        this.closeQuestionModal();
       } catch (err) {
-        console.error("Error creating question:", err);
-        this.showToast("Network error posting question", "error");
-      } finally {
-        this.posting = false;
+        console.error(err);
+        alert(err.message);
       }
-    },
-
-    async addAnswer(questionId) {
-      const content = this.newAnswers[questionId];
-      if (!content || !content.trim()) {
-        this.showToast("Please enter an answer", "error");
-        return;
-      }
-
-      this.postingAnswer = true;
-      try {
-        const token = localStorage.getItem("authToken");
-        const response = await fetch(`${API_BASE_URL}/forum/questions/${questionId}/answers`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ content })
-        });
-
-        if (response.ok) {
-          this.newAnswers[questionId] = "";
-          this.showToast("Answer posted successfully!", "success");
-          await this.fetchQuestions();
-        } else {
-          const error = await response.json();
-          this.showToast(error.error || "Failed to post answer", "error");
-        }
-      } catch (err) {
-        console.error("Error adding answer:", err);
-        this.showToast("Network error posting answer", "error");
-      } finally {
-        this.postingAnswer = false;
-      }
-    },
-
-    async toggleLikeQuestion(question) {
-      if (!this.user) {
-        this.showToast("Please login to like questions", "error");
-        return;
-      }
-
-      try {
-        const token = localStorage.getItem("authToken");
-        const response = await fetch(`${API_BASE_URL}/forum/questions/${question.id}/like`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          await this.fetchQuestions();
-        } else {
-          this.showToast("Failed to like question", "error");
-        }
-      } catch (err) {
-        console.error("Error liking question:", err);
-        this.showToast("Network error", "error");
-      }
-    },
-
-    async likeAnswer(answer) {
-      if (!this.user) {
-        this.showToast("Please login to like answers", "error");
-        return;
-      }
-
-      try {
-        const token = localStorage.getItem("authToken");
-        const response = await fetch(`${API_BASE_URL}/forum/answers/${answer.id}/like`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          await this.fetchQuestions();
-        } else {
-          this.showToast("Failed to like answer", "error");
-        }
-      } catch (err) {
-        console.error("Error liking answer:", err);
-        this.showToast("Network error", "error");
-      }
-    },
-
-    formatDate(date) {
-      if (!date) return 'Unknown date';
-      const dateObj = new Date(date);
-      const now = new Date();
-      const diff = now - dateObj;
-      
-      // Less than 1 hour
-      if (diff < 3600000) {
-        const minutes = Math.floor(diff / 60000);
-        return minutes <= 1 ? 'Just now' : `${minutes} minutes ago`;
-      }
-      // Less than 24 hours
-      if (diff < 86400000) {
-        const hours = Math.floor(diff / 3600000);
-        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-      }
-      // Less than 7 days
-      if (diff < 604800000) {
-        const days = Math.floor(diff / 86400000);
-        return `${days} day${days > 1 ? 's' : ''} ago`;
-      }
-      // Default to date string
-      return dateObj.toLocaleDateString();
-    },
-
-    showToast(message, type = 'info') {
-      const toast = document.createElement('div');
-      toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show position-fixed`;
-      toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-      toast.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      `;
-      document.body.appendChild(toast);
-
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
-      }, 5000);
     }
-  },
+  }
 };
 </script>
 
+
 <style scoped>
-textarea {
-  resize: vertical;
-  min-height: 80px;
+.question-card {
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: var(--shadow-medium);
+  transition: all 0.3s ease;
+  background: var(--background-white);
 }
-
-.accordion-button {
-  background-color: #f8f9fa;
+.question-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-heavy);
+  border-color: var(--primary-pink);
 }
-
-.accordion-button:not(.collapsed) {
-  background-color: #e7f1ff;
-  color: #0c63e4;
+.filter-section {
+  background: linear-gradient(135deg, #e6f2ff 0%, #f0f9ff 100%);
+  border: 2px solid var(--border-light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-medium);
 }
-
-.accordion-item {
-  border-radius: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #dee2e6;
+.spinner {
+  animation: spin 1s linear infinite;
 }
-
-.card {
-  border-radius: 10px;
-  border: 1px solid #dee2e6;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+} /* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
 }
-
-.btn {
-  border-radius: 20px;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-
-.btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+.modal-container {
+  background: white;
+  border-radius: 16px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
 }
-
-.answers {
-  background-color: #f8f9fa;
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.btn-close:hover {
+  background: #f8f9fa;
+  color: #333;
+}
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+.question-detail {
+  margin-bottom: 1rem;
+}
+.question-content {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #555;
+  white-space: pre-wrap;
+}
+.answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.answer-card {
+  background: #f8f9fa;
   padding: 1rem;
   border-radius: 8px;
-  margin-top: 1rem;
+  border-left: 3px solid #007bff;
 }
-
-.bg-light {
-  background-color: #ffffff !important;
+.answer-header {
+  margin-bottom: 0.5rem;
 }
-
-.badge {
-  font-size: 0.75rem;
-  padding: 0.35em 0.65em;
+.answer-content {
+  margin: 0;
+  line-height: 1.5;
+  color: #333;
+  white-space: pre-wrap;
 }
-
-.spinner-border-sm {
-  width: 1rem;
-  height: 1rem;
-  border-width: 0.15em;
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+} /* Responsive */
+@media (max-width: 768px) {
+  .modal-container {
+    max-height: 95vh;
+    margin: 10px;
+  }
+  .modal-header h3 {
+    font-size: 1.25rem;
+  }
 }
 </style>
