@@ -182,7 +182,7 @@ def update_pet(pet_id):
     try:
         data = request.get_json()
         
-        # Extract all fields including furColor
+        # Extract pet data (excluding images)
         update_data = {
             'name': data.get('name'),
             'type': data.get('type'),
@@ -191,18 +191,80 @@ def update_pet(pet_id):
             'size': data.get('size'),
             'personality': data.get('personality'),
             'furColor': data.get('furColor'),
-            'image': data.get('image'),
             'available': data.get('available'),
             'updated_at': datetime.now(timezone.utc).isoformat()
         }
         
+        # Handle single image update
+        if data.get('image'):
+            update_data['image'] = data['image']
+            update_data['main_image'] = data['image']
+        
         # Remove None values
         update_data = {k: v for k, v in update_data.items() if v is not None}
         
-        # Update in Supabase
+        # Update pet in Supabase
         response = supabase.table('pets').update(update_data).eq('id', pet_id).execute()
         
         if response.data:
+            # Handle multiple images update if provided
+            if 'images' in data:
+                # Delete existing images
+                supabase.table('pet_images').delete().eq('pet_id', pet_id).execute()
+                
+                # Insert new images
+                images = data['images']
+                if images:
+                    image_records = []
+                    for i, image in enumerate(images):
+                        if isinstance(image, dict) and 'image_url' in image:
+                            image_records.append({
+                                'pet_id': pet_id,
+                                'image_url': image['image_url'],
+                                'image_order': image.get('image_order', i)
+                            })
+                        elif isinstance(image, str) and image.strip():
+                            image_records.append({
+                                'pet_id': pet_id,
+                                'image_url': image.strip(),
+                                'image_order': i
+                            })
+                    
+                    if image_records:
+                        supabase.table('pet_images').insert(image_records).execute()
+                        
+                        # Update main_image to first image
+                        first_image = image_records[0]['image_url']
+                        supabase.table('pets').update({
+                            'main_image': first_image,
+                            'image': first_image
+                        }).eq('id', pet_id).execute()
+            
+            # Return updated pet with images
+            updated_pet = supabase.table('pets').select('''
+                *,
+                pet_images(*)
+            ''').eq('id', pet_id).execute()
+            
+            if updated_pet.data:
+                pet = updated_pet.data[0]
+                images = pet.get('pet_images', [])
+                if not images and pet.get('image'):
+                    images = [{'image_url': pet['image'], 'image_order': 0}]
+                
+                images.sort(key=lambda x: x.get('image_order', 0))
+                
+                pet_response = {
+                    **pet,
+                    'images': images,
+                    'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+                }
+                
+                if 'pet_images' in pet_response:
+                    del pet_response['pet_images']
+                
+                return jsonify(pet_response)
+            
             return jsonify(response.data[0])
         else:
             return jsonify({'error': 'Pet not found'}), 404
@@ -213,21 +275,45 @@ def update_pet(pet_id):
 
 # PET ROUTES - UPDATED TO FILTER ADOPTED PETS
 # PET ROUTES - UPDATED TO FILTER ADOPTED PETS
+# PET ROUTES - UPDATED FOR MULTIPLE IMAGES
 @app.route('/api/pets', methods=['GET'])
 def get_pets():
     try:
-        # Get only available pets from Supabase
-        # Use both available and is_adopted for compatibility
-        response = supabase.table('pets').select('*').eq('available', True).execute()
+        # Get pets with their images
+        response = supabase.table('pets').select('''
+            *,
+            pet_images(*)
+        ''').eq('available', True).execute()
         
         if response.data:
-            # Filter out adopted pets if is_adopted column exists
+            # Filter out adopted pets and format response
             available_pets = []
             for pet in response.data:
-                # If is_adopted column exists and is True, skip this pet
+                # Skip adopted pets
                 if pet.get('is_adopted'):
                     continue
-                available_pets.append(pet)
+                
+                # Format images array
+                images = pet.get('pet_images', [])
+                if not images and pet.get('image'):
+                    # Fallback for pets with only old image field
+                    images = [{'image_url': pet['image'], 'image_order': 0}]
+                
+                # Sort images by order
+                images.sort(key=lambda x: x.get('image_order', 0))
+                
+                # Create pet response with images array
+                pet_response = {
+                    **pet,
+                    'images': images,
+                    'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+                }
+                
+                # Remove the pet_images key to avoid confusion
+                if 'pet_images' in pet_response:
+                    del pet_response['pet_images']
+                
+                available_pets.append(pet_response)
             
             return jsonify(available_pets)
         else:
@@ -240,45 +326,134 @@ def get_pets():
 @app.route('/api/pets/<int:pet_id>', methods=['GET'])
 def get_pet(pet_id):
     try:
-        response = supabase.table('pets').select('*').eq('id', pet_id).execute()
+        response = supabase.table('pets').select('''
+            *,
+            pet_images(*)
+        ''').eq('id', pet_id).execute()
+        
         if not response.data:
             return jsonify({'error': 'Pet not found'}), 404
-        return jsonify(response.data[0])
+        
+        pet = response.data[0]
+        
+        # Format images
+        images = pet.get('pet_images', [])
+        if not images and pet.get('image'):
+            # Fallback for pets with only old image field
+            images = [{'image_url': pet['image'], 'image_order': 0}]
+        
+        # Sort images by order
+        images.sort(key=lambda x: x.get('image_order', 0))
+        
+        # Create response with images array
+        pet_response = {
+            **pet,
+            'images': images,
+            'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+        }
+        
+        # Remove the pet_images key
+        if 'pet_images' in pet_response:
+            del pet_response['pet_images']
+        
+        return jsonify(pet_response)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 # ADD PET ROUTE
+# ADD PET ROUTE - UPDATED FOR MULTIPLE IMAGES
 @app.route('/api/pets', methods=['POST'])
 def create_pet():
     try:
         data = request.get_json()
         
-        # Create pet data for Supabase with ALL fields
+        # Create pet data for Supabase
         pet_data = {
             'name': data.get('name'),
             'type': data.get('type'),
             'breed': data.get('breed'),
             'age': data.get('age'),
             'size': data.get('size'),
-            'gender': data.get('gender'),  # Add this
+            'gender': data.get('gender'),
             'personality': data.get('personality'),
-            'activity_level': data.get('activity_level', 'medium'),  # Add this
-            'furColor': data.get('furColor', ''),  # Add this
-            'vaccination_status': data.get('vaccination_status', 'Unknown'),  # Add this
-            'adoption_fee': data.get('adoption_fee', 0),  # Add this
-            'health_info': data.get('health_info', ''),  # Add this
-            'location': data.get('location', 'Singapore'),  # Add this
-            'image': data.get('image', ''),
+            'activity_level': data.get('activity_level', 'medium'),
+            'furColor': data.get('furColor', ''),
+            'vaccination_status': data.get('vaccination_status', 'Unknown'),
+            'adoption_fee': data.get('adoption_fee', 0),
+            'health_info': data.get('health_info', ''),
+            'location': data.get('location', 'Singapore'),
             'available': True,
-            'is_adopted': False,  # Important for filtering
+            'is_adopted': False,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
+        
+        # Handle single image (backward compatibility)
+        single_image = data.get('image')
+        if single_image:
+            pet_data['main_image'] = single_image
+            pet_data['image'] = single_image  # Keep for backward compatibility
         
         # Insert into Supabase
         response = supabase.table('pets').insert(pet_data).execute()
         
         if response.data:
-            return jsonify(response.data[0]), 201
+            new_pet = response.data[0]
+            pet_id = new_pet['id']
+            
+            # Handle multiple images if provided
+            images = data.get('images', [])
+            if images:
+                # If images is an array of URLs
+                image_records = []
+                for i, image_url in enumerate(images):
+                    if isinstance(image_url, str) and image_url.strip():
+                        image_records.append({
+                            'pet_id': pet_id,
+                            'image_url': image_url.strip(),
+                            'image_order': i
+                        })
+                
+                if image_records:
+                    # Insert all images
+                    supabase.table('pet_images').insert(image_records).execute()
+                    
+                    # Set first image as main_image
+                    first_image = image_records[0]['image_url']
+                    supabase.table('pets').update({
+                        'main_image': first_image,
+                        'image': first_image  # Keep for backward compatibility
+                    }).eq('id', pet_id).execute()
+                    
+                    new_pet['main_image'] = first_image
+                    new_pet['image'] = first_image
+            
+            # Get the complete pet with images
+            complete_pet = supabase.table('pets').select('''
+                *,
+                pet_images(*)
+            ''').eq('id', pet_id).execute()
+            
+            if complete_pet.data:
+                pet_with_images = complete_pet.data[0]
+                # Format the response
+                images_array = pet_with_images.get('pet_images', [])
+                if not images_array and single_image:
+                    images_array = [{'image_url': single_image, 'image_order': 0}]
+                
+                images_array.sort(key=lambda x: x.get('image_order', 0))
+                
+                final_response = {
+                    **pet_with_images,
+                    'images': images_array,
+                    'main_image': pet_with_images.get('main_image') or (images_array[0]['image_url'] if images_array else None)
+                }
+                
+                if 'pet_images' in final_response:
+                    del final_response['pet_images']
+                
+                return jsonify(final_response), 201
+            
+            return jsonify(new_pet), 201
         else:
             print("Supabase error:", response)
             return jsonify({'error': 'Failed to create pet'}), 400
@@ -287,6 +462,80 @@ def create_pet():
         print('Error creating pet:', e)
         return jsonify({'error': f'Failed to create pet: {str(e)}'}), 500
 
+# PET IMAGES MANAGEMENT
+@app.route('/api/pets/<int:pet_id>/images', methods=['POST'])
+def add_pet_images(pet_id):
+    try:
+        data = request.get_json()
+        images = data.get('images', [])
+        
+        if not images:
+            return jsonify({'error': 'No images provided'}), 400
+        
+        # Get current max order
+        current_images = supabase.table('pet_images').select('image_order').eq('pet_id', pet_id).order('image_order', desc=True).execute()
+        start_order = current_images.data[0]['image_order'] + 1 if current_images.data else 0
+        
+        # Prepare image records
+        image_records = []
+        for i, image_url in enumerate(images):
+            if isinstance(image_url, str) and image_url.strip():
+                image_records.append({
+                    'pet_id': pet_id,
+                    'image_url': image_url.strip(),
+                    'image_order': start_order + i
+                })
+        
+        if image_records:
+            # Insert new images
+            response = supabase.table('pet_images').insert(image_records).execute()
+            
+            # Update main_image if this is the first image
+            if start_order == 0 and image_records:
+                first_image = image_records[0]['image_url']
+                supabase.table('pets').update({
+                    'main_image': first_image,
+                    'image': first_image
+                }).eq('id', pet_id).execute()
+            
+            return jsonify({'message': f'Added {len(image_records)} images', 'images': response.data}), 201
+        else:
+            return jsonify({'error': 'No valid images provided'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pets/<int:pet_id>/images/<int:image_id>', methods=['DELETE'])
+def delete_pet_image(pet_id, image_id):
+    try:
+        # Delete the image
+        response = supabase.table('pet_images').delete().eq('id', image_id).eq('pet_id', pet_id).execute()
+        
+        if response.data:
+            # Check if we need to update main_image
+            remaining_images = supabase.table('pet_images').select('*').eq('pet_id', pet_id).order('image_order').execute()
+            
+            if remaining_images.data:
+                # Set new main_image to first remaining image
+                new_main_image = remaining_images.data[0]['image_url']
+                supabase.table('pets').update({
+                    'main_image': new_main_image,
+                    'image': new_main_image
+                }).eq('id', pet_id).execute()
+            else:
+                # No images left, clear main_image
+                supabase.table('pets').update({
+                    'main_image': None,
+                    'image': None
+                }).eq('id', pet_id).execute()
+            
+            return jsonify({'message': 'Image deleted successfully'}), 200
+        else:
+            return jsonify({'error': 'Image not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 @app.route('/api/pets/with-scores', methods=['GET'])
 @token_required
 def get_pets_with_scores(current_user):
@@ -299,24 +548,43 @@ def get_pets_with_scores(current_user):
         
         user_profile = profile_response.data[0]
         
-        # Get only available pets (not adopted)
-        pets_response = supabase.table('pets').select('*').eq('is_adopted', False).execute()
+        # Get available pets with their images
+        pets_response = supabase.table('pets').select('''
+            *,
+            pet_images(*)
+        ''').eq('is_adopted', False).execute()
+        
         pets = pets_response.data
         
         # Calculate scores for each pet
         pets_with_scores = []
         for pet in pets:
+            # Format images
+            images = pet.get('pet_images', [])
+            if not images and pet.get('image'):
+                images = [{'image_url': pet['image'], 'image_order': 0}]
+            
+            images.sort(key=lambda x: x.get('image_order', 0))
+            
             compatibility_score = calculate_compatibility_score(user_profile, pet)
             
             # Get favorite status
             favorite_response = supabase.table('user_favorites').select('id').eq('user_id', current_user).eq('pet_id', pet['id']).execute()
             is_favorite = len(favorite_response.data) > 0
             
-            pets_with_scores.append({
+            # Create pet response with images
+            pet_response = {
                 **pet,
+                'images': images,
+                'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None),
                 'compatibility_score': compatibility_score,
                 'is_favorite': is_favorite
-            })
+            }
+            
+            if 'pet_images' in pet_response:
+                del pet_response['pet_images']
+            
+            pets_with_scores.append(pet_response)
         
         # Sort by compatibility score (highest first)
         pets_with_scores.sort(key=lambda x: x['compatibility_score'], reverse=True)
