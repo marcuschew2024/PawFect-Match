@@ -8,200 +8,201 @@
           <i class="bi bi-heart me-2"></i>View Favorites
         </router-link>
       </div>
-  </div>
-
-  <!-- Quiz Prompt for Authenticated Users - FIXED -->
-  <div v-if="isAuthenticated && !hasCompletedQuiz && !loading" class="alert alert-info">
-    <div class="d-flex justify-content-between align-items-center">
-      <div>
-        <i class="bi bi-info-circle me-2"></i>
-        Complete our lifestyle quiz to see compatibility scores with each pet!
-      </div>
-      <button class="btn btn-primary btn-sm" @click="$router.push('/quiz')">
-        Take Quiz Now
-      </button>
     </div>
-  </div>
 
-  <!-- Enhanced Filter Section -->
-  <div class="filter-section">
-    <div class="row g-3 align-items-end">
-      <!-- Search Input -->
-      <div class="col-lg-3 col-md-6">
-        <label for="searchInput" class="form-label">SEARCH PETS</label>
-        <input type="text" class="form-control" id="searchInput" v-model="searchTerm"
-          placeholder="Name, breed, or personality..." autocomplete="off">
-      </div>
-
-      <!-- Type Filter -->
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <label for="typeFilter" class="form-label">TYPE</label>
-        <select class="form-select" id="typeFilter" v-model="filters.type">
-          <option value="">All Types</option>
-          <option value="dog">Dogs</option>
-          <option value="cat">Cats</option>
-        </select>
-      </div>
-
-      <!-- Size Filter -->
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <label for="sizeFilter" class="form-label">SIZE</label>
-        <select class="form-select" id="sizeFilter" v-model="filters.size">
-          <option value="">All Sizes</option>
-          <option value="Small">Small</option>
-          <option value="Medium">Medium</option>
-          <option value="Large">Large</option>
-        </select>
-      </div>
-
-      <!-- Compatibility Filter -->
-      <div v-if="hasCompletedQuiz" class="col-lg-2 col-md-4 col-sm-6">
-        <label for="compatibilityFilter" class="form-label">MIN SCORE</label>
-        <select class="form-select" id="compatibilityFilter" v-model="filters.minScore">
-          <option value="0">Any Score</option>
-          <option value="70">70%+</option>
-          <option value="80">80%+</option>
-          <option value="90">90%+</option>
-        </select>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="col-lg-3 col-md-6">
-        <div class="d-flex gap-2">
-          <button class="btn btn-pink flex-fill" @click="applyFilters">
-            <i class="bi bi-funnel me-2"></i>APPLY FILTERS
-          </button>
-          <button class="btn btn-outline-secondary" @click="resetFilters">
-            <i class="bi bi-arrow-clockwise"></i>
-          </button>
+    <!-- Quiz Prompt for Authenticated Users - FIXED -->
+    <div v-if="isAuthenticated && !hasCompletedQuiz && !loading" class="alert alert-info">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <i class="bi bi-info-circle me-2"></i>
+          Complete our lifestyle quiz to see compatibility scores with each pet!
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pets Grid -->
-  <div class="row mt-4">
-    <div v-if="loading" class="col-12">
-      <div class="loading-text">
-        <i class="bi bi-arrow-repeat spinner me-2"></i>
-        Loading pets for You...
+        <button class="btn btn-primary btn-sm" @click="$router.push('/quiz')">
+          Take Quiz Now
+        </button>
       </div>
     </div>
 
-    <div v-else-if="error" class="col-12">
-      <div class="error-message text-center">
-        <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
-        <h4>Unable to Load Pets</h4>
-        <p class="mt-3">{{ error }}</p>
-        <div class="mt-4">
-          <button class="btn btn-primary me-2" @click="fetchPets">
-            <i class="bi bi-arrow-clockwise me-2"></i>Try Again
-          </button>
+    <!-- Enhanced Filter Section -->
+    <div class="filter-section">
+      <div class="row g-3 align-items-end">
+        <!-- Search Input -->
+        <div class="col-lg-3 col-md-6">
+          <label for="searchInput" class="form-label">SEARCH PETS</label>
+          <input type="text" class="form-control" id="searchInput" v-model="searchTerm"
+            placeholder="Name, breed, or personality..." autocomplete="off">
+        </div>
+
+        <!-- Type Filter -->
+        <div class="col-lg-2 col-md-4 col-sm-6">
+          <label for="typeFilter" class="form-label">TYPE</label>
+          <select class="form-select" id="typeFilter" v-model="filters.type">
+            <option value="">All Types</option>
+            <option value="dog">Dogs</option>
+            <option value="cat">Cats</option>
+          </select>
+        </div>
+
+        <!-- Size Filter -->
+        <div class="col-lg-2 col-md-4 col-sm-6">
+          <label for="sizeFilter" class="form-label">SIZE</label>
+          <select class="form-select" id="sizeFilter" v-model="filters.size">
+            <option value="">All Sizes</option>
+            <option value="Small">Small</option>
+            <option value="Medium">Medium</option>
+            <option value="Large">Large</option>
+          </select>
+        </div>
+
+        <!-- Compatibility Filter -->
+        <div v-if="hasCompletedQuiz" class="col-lg-2 col-md-4 col-sm-6">
+          <label for="compatibilityFilter" class="form-label">MIN SCORE</label>
+          <select class="form-select" id="compatibilityFilter" v-model="filters.minScore">
+            <option value="0">Any Score</option>
+            <option value="70">70%+</option>
+            <option value="80">80%+</option>
+            <option value="90">90%+</option>
+          </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-lg-3 col-md-6">
+          <div class="d-flex gap-2">
+            <button class="btn btn-pink flex-fill" @click="applyFilters">
+              <i class="bi bi-funnel me-2"></i>APPLY FILTERS
+            </button>
+            <button class="btn btn-outline-secondary" @click="resetFilters">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div v-else-if="filteredPets.length === 0" class="col-12">
-      <div class="no-results">No pets found matching your criteria.</div>
-    </div>
+    <!-- Pets Grid -->
+    <div class="row mt-4">
+      <div v-if="loading" class="col-12">
+        <div class="loading-text">
+          <i class="bi bi-arrow-repeat spinner me-2"></i>
+          Loading pets for You...
+        </div>
+      </div>
 
-    <div v-else class="col-md-6 col-lg-4 mb-4" v-for="pet in filteredPets" :key="pet.id">
-      <div class="card h-100 pet-card">
-        <div class="position-relative">
-          <img :src="pet.displayImage" :alt="pet.name" class="card-img-top" :class="{ 'image-loaded': pet.imageLoaded }"
-            @load="onImageLoad(pet)" @error="onImageError(pet)" loading="lazy">
-
-          <!-- Compatibility Score Badge -->
-          <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-badge">
-            {{ pet.compatibility_score }}% Match
-          </div>
-
-          <!-- Favorite Button -->
-          <button v-if="isAuthenticated" class="favorite-btn" @click="toggleFavorite(pet)"
-            :class="{ 'favorited': pet.is_favorite }">
-            <i class="bi" :class="pet.is_favorite ? 'bi-heart-fill' : 'bi-heart'"></i>
-          </button>
-
-          <!-- Image Source Badge -->
-          <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
-            AI Generated Image
-          </div>
-          <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
-            Real Image
-          </div>
-
-          <div v-if="!pet.imageLoaded" class="image-loading">
-            <i class="bi bi-arrow-repeat spinner"></i>
+      <div v-else-if="error" class="col-12">
+        <div class="error-message text-center">
+          <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+          <h4>Unable to Load Pets</h4>
+          <p class="mt-3">{{ error }}</p>
+          <div class="mt-4">
+            <button class="btn btn-primary me-2" @click="fetchPets">
+              <i class="bi bi-arrow-clockwise me-2"></i>Try Again
+            </button>
           </div>
         </div>
+      </div>
 
-        <div class="card-body d-flex flex-column">
-          <h5 class="card-title">{{ pet.name }}</h5>
+      <div v-else-if="filteredPets.length === 0" class="col-12">
+        <div class="no-results">No pets found matching your criteria.</div>
+      </div>
 
-          <!-- Compatibility Meter -->
-          <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-meter mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <small class="text-muted">Compatibility</small>
-              <small class="fw-bold text-muted">
-                {{ pet.compatibility_score }}%
-              </small>
+      <div v-else class="col-md-6 col-lg-4 mb-4" v-for="pet in filteredPets" :key="pet.id">
+        <div class="card h-100 pet-card">
+          <div class="position-relative">
+            <img :src="pet.displayImage" :alt="pet.name" class="card-img-top"
+              :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
+              loading="lazy">
+
+            <!-- Compatibility Score Badge -->
+            <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-badge">
+              {{ pet.compatibility_score }}% Match
             </div>
-            <div class="progress" style="height: 6px;">
-              <div class="progress-bar bg-primary" :style="{ width: pet.compatibility_score + '%' }"></div>
+
+            <!-- Favorite Button -->
+            <button v-if="isAuthenticated" class="favorite-btn" @click="toggleFavorite(pet)"
+              :class="{ 'favorited': pet.is_favorite }">
+              <i class="bi" :class="pet.is_favorite ? 'bi-heart-fill' : 'bi-heart'"></i>
+            </button>
+
+            <!-- Image Source Badge -->
+            <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
+              AI Generated Image
+            </div>
+            <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
+              Real Image
+            </div>
+
+            <div v-if="!pet.imageLoaded" class="image-loading">
+              <i class="bi bi-arrow-repeat spinner"></i>
             </div>
           </div>
 
-          <p class="card-text mb-2 flex-grow-1">
-            <strong>Age:</strong> {{ pet.age }}<br>
-            <strong>Breed:</strong> {{ pet.breed }}<br>
-            <strong>Size:</strong> {{ pet.size }}<br>
-            <strong>Gender:</strong> {{ pet.gender }}<br>
-            <strong>Activity:</strong>
-            <span class="badge" :class="getActivityClass(pet.activity_level)">
-              {{ pet.activity_level }}
-            </span>
-          </p>
-          <p class="card-text personality">"{{ pet.personality }}"</p>
-        </div>
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ pet.name }}</h5>
 
-        <div class="card-footer bg-transparent">
-          <div class="d-grid gap-2">
-            <!-- View More Button -->
-            <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
-              <i class="bi me-1"></i>View More
-            </button>
+            <!-- Compatibility Meter -->
+            <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-meter mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <small class="text-muted">Compatibility</small>
+                <small class="fw-bold text-muted">
+                  {{ pet.compatibility_score }}%
+                </small>
+              </div>
+              <div class="progress" style="height: 6px;">
+                <div class="progress-bar bg-primary" :style="{ width: pet.compatibility_score + '%' }"></div>
+              </div>
+            </div>
 
-            <!-- Adoption Button -->
-            <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
-              <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
-            </button>
+            <p class="card-text mb-2 flex-grow-1">
+              <strong>Age:</strong> {{ pet.age }}<br>
+              <strong>Breed:</strong> {{ pet.breed }}<br>
+              <strong>Size:</strong> {{ pet.size }}<br>
+              <strong>Gender:</strong> {{ pet.gender }}<br>
+              <strong>Activity:</strong>
+              <span class="badge" :class="getActivityClass(pet.activity_level)">
+                {{ pet.activity_level }}
+              </span>
+            </p>
+            <p class="card-text personality">"{{ pet.personality }}"</p>
+          </div>
 
-            <button v-else-if="!isAuthenticated" class="btn btn-outline-success" @click="$router.push('/login')">
-              <i class="bi bi-person me-1"></i>Login to Adopt
-            </button>
+          <div class="card-footer bg-transparent">
+            <div class="d-grid gap-2">
+              <!-- View More Button -->
+              <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
+                <i class="bi me-1"></i>View More
+              </button>
 
-            <button v-else-if="pet.is_adopted" class="btn btn-secondary" disabled>
-              <i class="bi bi-check-circle me-1"></i>Already Adopted
-            </button>
+              <!-- Adoption Button -->
+              <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
+                <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
+              </button>
 
-            <!-- Favorite Buttons -->
-            <button v-if="isAuthenticated && !pet.is_favorite" class="btn btn-outline-primary btn-sm"
-              @click="toggleFavorite(pet)">
-              <i class="bi bi-heart me-1"></i>Add to Favorites
-            </button>
-            <button v-else-if="isAuthenticated && pet.is_favorite" class="btn btn-outline-danger btn-sm"
-              @click="toggleFavorite(pet)">
-              <i class="bi bi-heart-fill me-1"></i>Remove Favorite
-            </button>
+              <button v-else-if="!isAuthenticated" class="btn btn-outline-success" @click="$router.push('/login')">
+                <i class="bi bi-person me-1"></i>Login to Adopt
+              </button>
+
+              <button v-else-if="pet.is_adopted" class="btn btn-secondary" disabled>
+                <i class="bi bi-check-circle me-1"></i>Already Adopted
+              </button>
+
+              <!-- Favorite Buttons -->
+              <button v-if="isAuthenticated && !pet.is_favorite" class="btn btn-outline-primary btn-sm"
+                @click="toggleFavorite(pet)">
+                <i class="bi bi-heart me-1"></i>Add to Favorites
+              </button>
+              <button v-else-if="isAuthenticated && pet.is_favorite" class="btn btn-outline-danger btn-sm"
+                @click="toggleFavorite(pet)">
+                <i class="bi bi-heart-fill me-1"></i>Remove Favorite
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Pet Detail Modal -->
-  <PetDetailModal ref="petDetailModal" :pet="selectedPet" :isAuthenticated="isAuthenticated"
-    :hasCompletedQuiz="hasCompletedQuiz" @start-adoption="startAdoption" />
+    <!-- Pet Detail Modal -->
+    <PetDetailModal ref="petDetailModal" :pet="selectedPet" :isAuthenticated="isAuthenticated"
+      :hasCompletedQuiz="hasCompletedQuiz" @start-adoption="startAdoption" />
   </div>
 </template>
 
@@ -247,8 +248,9 @@ export default {
       this.isAuthenticated = !!token;
     },
 
+
     async initializePage() {
-      // Load the breeds first 
+      this.checkAuth();
       await this.loadAllBreeds();
 
       // Check if user has completed quiz
