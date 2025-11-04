@@ -148,7 +148,10 @@
             </div>
 
             <div>
-              <button class="btn btn-outline-danger btn-sm" @click="toggleQuestionLike(question)">
+              <button 
+                :class="['btn btn-sm', question.liked ? 'btn-danger' : 'btn-outline-danger']"
+                @click="toggleQuestionLike(question)"
+              >
                 <i :class="question.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
                 {{ question.likes }}
               </button>
