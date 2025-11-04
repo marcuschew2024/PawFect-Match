@@ -1,5 +1,53 @@
 <template>
   <div class="container my-5">
+    <!-- Toast Notifications -->
+    <div class="toast-container">
+      <transition-group name="toast">
+        <div
+          v-for="toast in toastNotifications"
+          :key="toast.id"
+          :class="['toast-notification', `toast-${toast.type}`]"
+          @click="removeToastNotification(toast.id)"
+        >
+          <div class="toast-icon">
+            <i
+              :class="[
+                'bi',
+                toast.type === 'warning' ? 'bi-exclamation-triangle-fill' :
+                toast.type === 'success' ? 'bi-check-circle-fill' :
+                toast.type === 'error' ? 'bi-x-circle-fill' :
+                'bi-info-circle-fill'
+              ]"
+            ></i>
+          </div>
+          <div class="toast-content">
+            <p class="toast-message">{{ toast.message }}</p>
+          </div>
+          <button class="toast-close" @click.stop="removeToastNotification(toast.id)">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+      </transition-group>
+    </div>
+
+    <!-- Auth Modal Notification -->
+    <transition name="fade">
+      <div v-if="showNotification" class="auth-modal-overlay" @click="closeNotification">
+        <div class="auth-modal-content" @click.stop>
+          <button class="auth-modal-close" @click="closeNotification">&times;</button>
+          <div class="auth-modal-icon">
+            <i class="bi bi-lock-fill"></i>
+          </div>
+          <h3 class="auth-modal-title">{{ notificationTitle }}</h3>
+          <p class="auth-modal-message">{{ notificationMessage }}</p>
+          <div class="auth-modal-actions">
+            <button class="btn btn-auth-primary" @click="goToLogin">Sign In</button>
+            <button class="btn btn-auth-secondary" @click="closeNotification">Maybe Later</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
       <h1 class="fw-bold mb-0">Community Forum</h1>
@@ -85,9 +133,8 @@
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
             <div class="d-flex gap-2">
               <button
-                v-if="isAuthenticated"
                 class="btn btn-pink-outline btn-sm"
-                @click="submitAnswerToCard(question)"
+                @click="handleReplyClick(question)"
               >
                 <i class="bi bi-send me-1"></i>Reply
               </button>
@@ -100,10 +147,15 @@
               </button>
             </div>
 
-            <button class="btn btn-outline-danger btn-sm" @click="toggleQuestionLike(question)">
-              <i :class="question.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
-              {{ question.likes }}
-            </button>
+            <div>
+              <button 
+                :class="['btn btn-sm', question.liked ? 'btn-danger' : 'btn-outline-danger']"
+                @click="toggleQuestionLike(question)"
+              >
+                <i :class="question.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
+                {{ question.likes }}
+              </button>
+            </div>
           </div>
 
           <!-- Dropdown replies -->
@@ -113,7 +165,7 @@
                 No replies yet. Be the first to respond!
               </div>
 
-              <div v-for="answer in question.answers" :key="answer.id" class="answer-item">
+              <div v-for="answer in sortedAnswers(question.answers)" :key="answer.id" class="answer-item">
                 <div class="d-flex justify-content-between align-items-start">
                   <small class="text-muted">
                     <i class="bi bi-person-circle me-1"></i>{{ answer.author }} •
@@ -127,7 +179,10 @@
                     >
                       Delete
                     </button>
-                    <button class="btn btn-outline-primary btn-sm" @click="toggleAnswerLike(answer)">
+                    <button 
+                      :class="['btn btn-sm', answer.liked ? 'btn-primary' : 'btn-outline-primary']"
+                      @click="toggleAnswerLike(answer)"
+                    >
                       <i :class="answer.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
                       {{ answer.likes }}
                     </button>
@@ -205,13 +260,66 @@ export default {
       // Ask question modal
       showQuestionModal: false,
       newQuestion: { title: "", content: "", category: "general" },
+
+      // Notification system
+      showNotification: false,
+      notificationMessage: "",
+      notificationTitle: "",
+      notificationType: "info", // success, error, warning, info
+      notificationTimeout: null,
+
+      // Toast notification system
+      toastNotifications: [],
+      toastIdCounter: 0,
     };
+  },
+  computed: {
+    notificationIcon() {
+      const icons = {
+        success: "bi-check-circle-fill",
+        error: "bi-x-circle-fill",
+        warning: "bi-exclamation-triangle-fill",
+        info: "bi-info-circle-fill",
+      };
+      return icons[this.notificationType] || "bi-info-circle-fill";
+    },
   },
   async mounted() {
     this.checkAuth();
     await this.fetchQuestions();
   },
   methods: {
+    // Notification methods
+    showAuthModal(title, message) {
+      this.notificationTitle = title;
+      this.notificationMessage = message;
+      this.showNotification = true;
+    },
+    closeNotification() {
+      this.showNotification = false;
+    },
+    goToLogin() {
+      // Redirect to login page - adjust this route as needed
+      this.$router.push('/login');
+      // OR if you don't have router:
+      // window.location.href = '/login';
+    },
+    showToastNotification(message, type = "info") {
+      const id = this.toastIdCounter++;
+      const toast = { id, message, type };
+      this.toastNotifications.push(toast);
+      
+      setTimeout(() => {
+        this.removeToastNotification(id);
+      }, 4000);
+    },
+    removeToastNotification(id) {
+      const index = this.toastNotifications.findIndex(t => t.id === id);
+      if (index > -1) {
+        this.toastNotifications.splice(index, 1);
+      }
+    },
+
     checkAuth() {
       const token = localStorage.getItem("authToken");
       this.isAuthenticated = !!token;
@@ -224,6 +332,8 @@ export default {
         const res = await fetch(`${API_BASE_URL}/forum/questions`);
         const data = await res.json();
         this.questions = data.map((q) => ({ ...q, newAnswer: "", liked: false }));
+        // Sort questions by likes in descending order (most liked first)
+        this.questions.sort((a, b) => b.likes - a.likes);
         this.filteredQuestions = [...this.questions];
       } catch (err) {
         this.error = "Failed to load questions.";
@@ -257,8 +367,25 @@ export default {
     toggleDiscussion(id) {
       this.expandedQuestion = this.expandedQuestion === id ? null : id;
     },
+    handleReplyClick(question) {
+      if (!this.isAuthenticated) {
+        this.showAuthModal(
+          "Reply to this post?",
+          "Sign in to join the conversation and share your thoughts."
+        );
+        return;
+      }
+      // If logged in, submit the answer
+      this.submitAnswerToCard(question);
+    },
     async submitAnswerToCard(question) {
-      if (!question.newAnswer.trim()) return alert("Reply cannot be empty.");
+      if (!question.newAnswer.trim()) {
+        this.showToastNotification(
+          "Please write something before submitting your reply.",
+          "warning"
+        );
+        return;
+      }
       try {
         const token = localStorage.getItem("authToken");
         const res = await fetch(`${API_BASE_URL}/forum/questions/${question.id}/answers`, {
@@ -273,8 +400,12 @@ export default {
         const newAnswer = await res.json();
         question.answers.push(newAnswer);
         question.newAnswer = "";
+        this.showToastNotification("Reply submitted successfully!", "success");
       } catch (err) {
-        alert(err.message);
+        this.showToastNotification(
+          "Failed to submit reply. Please try again.",
+          "error"
+        );
       }
     },
     async deleteAnswer(id) {
@@ -287,8 +418,18 @@ export default {
       this.questions.forEach((q) => {
         q.answers = q.answers.filter((a) => a.id !== id);
       });
+      this.showToastNotification("Answer deleted successfully.", "success");
     },
     async toggleQuestionLike(q) {
+      // Check if user is authenticated
+      if (!this.isAuthenticated) {
+        this.showAuthModal(
+          "Like this post?",
+          "Sign in to show your support and engage with the community."
+        );
+        return;
+      }
+
       const token = localStorage.getItem("authToken");
       const res = await fetch(`${API_BASE_URL}/forum/questions/${q.id}/like`, {
         method: "POST",
@@ -298,9 +439,22 @@ export default {
         const data = await res.json();
         q.liked = data.liked;
         q.likes = data.likes;
+        
+        // Re-sort questions after like update
+        this.questions.sort((a, b) => b.likes - a.likes);
+        this.filteredQuestions = [...this.questions];
       }
     },
     async toggleAnswerLike(a) {
+      // Check if user is authenticated
+      if (!this.isAuthenticated) {
+        this.showAuthModal(
+          "Like this reply?",
+          "Sign in to show your appreciation and interact with others."
+        );
+        return;
+      }
+
       const token = localStorage.getItem("authToken");
       const res = await fetch(`${API_BASE_URL}/forum/answers/${a.id}/like`, {
         method: "POST",
@@ -310,7 +464,14 @@ export default {
         const data = await res.json();
         a.liked = data.liked;
         a.likes = data.likes;
+        // Force re-render to update the sorted order
+        this.$forceUpdate();
       }
+    },
+    
+    // Helper method to sort answers by likes
+    sortedAnswers(answers) {
+      return [...answers].sort((a, b) => b.likes - a.likes);
     },
 
     // Ask Question Modal
@@ -323,7 +484,10 @@ export default {
     },
     async submitQuestion() {
       if (!this.newQuestion.title.trim() || !this.newQuestion.content.trim()) {
-        alert("All fields are required.");
+        this.showToastNotification(
+          "Please fill in all fields before submitting your question.",
+          "warning"
+        );
         return;
       }
       try {
@@ -341,8 +505,12 @@ export default {
         this.questions.unshift(createdQuestion);
         this.filteredQuestions.unshift(createdQuestion);
         this.closeQuestionModal();
+        this.showToastNotification("Question posted successfully!", "success");
       } catch (err) {
-        alert(err.message);
+        this.showToastNotification(
+          "Failed to submit question. Please try again.",
+          "error"
+        );
       }
     },
   },
@@ -350,9 +518,340 @@ export default {
 </script>
 
 <style scoped>
+/* Toast Notification Styles */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+}
 
-.btn-box{
-    background: linear-gradient(135deg, #ff868a 0%, #fa9696 100%);
+.toast-notification {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  border-left: 4px solid;
+  min-width: 320px;
+  transition: all 0.3s ease;
+}
+
+.toast-notification:hover {
+  transform: translateX(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.toast-warning {
+  border-left-color: #f59e0b;
+  background: linear-gradient(to right, #fffbeb, white);
+}
+
+.toast-success {
+  border-left-color: #10b981;
+  background: linear-gradient(to right, #f0fdf4, white);
+}
+
+.toast-error {
+  border-left-color: #ef4444;
+  background: linear-gradient(to right, #fef2f2, white);
+}
+
+.toast-info {
+  border-left-color: #3b82f6;
+  background: linear-gradient(to right, #eff6ff, white);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.toast-warning .toast-icon {
+  color: #f59e0b;
+}
+
+.toast-success .toast-icon {
+  color: #10b981;
+}
+
+.toast-error .toast-icon {
+  color: #ef4444;
+}
+
+.toast-info .toast-icon {
+  color: #3b82f6;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-message {
+  margin: 0;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.toast-close:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Toast animations */
+.toast-enter-active {
+  animation: toastSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toast-leave-active {
+  animation: toastSlideOut 0.3s ease;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* Auth Modal Styles */
+.auth-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.auth-modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 40px 35px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  text-align: center;
+  animation: modalSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #999;
+  cursor: pointer;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.auth-modal-close:hover {
+  background: #f3f4f6;
+  color: #666;
+}
+
+.auth-modal-icon {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 20px;
+  background: linear-gradient(135deg, #ffd4d8 0%, #ffc1cc 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid #ff6b9a;
+}
+
+.auth-modal-icon i {
+  font-size: 32px;
+  color: #ff6b9a;
+}
+
+.auth-modal-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 12px;
+}
+
+.auth-modal-message {
+  font-size: 15px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+.auth-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-auth-primary {
+  background: linear-gradient(135deg, #ff7d82 0%, #fa9696 100%);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.btn-auth-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 107, 154, 0.35);
+  background: linear-gradient(135deg, #eb7e7e 0%, #ff9a9e 100%);
+}
+
+.btn-auth-secondary {
+  background: white;
+  color: #6b7280;
+  border: 2px solid #e5e7eb;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn-auth-secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #4b5563;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fade-enter-active {
+  animation: fadeIn 0.3s ease;
+}
+
+.fade-leave-active {
+  animation: fadeOut 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .auth-modal-content {
+    padding: 35px 25px;
+    max-width: 90%;
+  }
+  
+  .auth-modal-title {
+    font-size: 21px;
+  }
+  
+  .auth-modal-message {
+    font-size: 14px;
+  }
+
+  .toast-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  .toast-notification {
+    min-width: auto;
+  }
+}
+
+/* Original Styles */
+.btn-box {
+  background: linear-gradient(135deg, #ff868a 0%, #fa9696 100%);
   color: white;
   border: none !important;
   padding: 12px 25px;
@@ -360,10 +859,10 @@ export default {
   transition: all 0.3s ease;
 }
 
-.btn-box:hover{
-    transform: translateY(-2px);
+.btn-box:hover {
+  transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
-  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  background: linear-gradient(135deg, #eb7e7e 0%, #ff9a9e 100%);
   color: white;
 }
 
@@ -388,9 +887,10 @@ export default {
 }
 
 .btn-pink {
-  background: linear-gradient(135deg, #ff7d82 0%, #fa9696 100%);
-  color: white;
-  border: none !important;
+  /* background: linear-gradient(135deg, #ff7d82 0%, #fa9696 100%); */
+  background-origin: white;
+  color: #ff6b9a;
+  border:  #ff6b9a solid 1px !important;
   padding: 12px 25px;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -399,7 +899,7 @@ export default {
 .btn-pink:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
-  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  background: linear-gradient(135deg, #eb7e7e 0%, #ff9a9e 100%);
   color: white;
 }
 
@@ -476,16 +976,6 @@ export default {
   font-size: 1.5rem;
   color: #777;
   cursor: pointer;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 
 @media (max-width: 768px) {

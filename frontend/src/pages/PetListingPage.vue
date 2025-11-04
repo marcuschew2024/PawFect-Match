@@ -3,17 +3,14 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="mb-0">Find Your Pawfect Match</h1>
       <div v-if="isAuthenticated" class="d-flex gap-2">
-        <button class="btn btn-warning" @click="$router.push('/quiz')">
-          <i class="bi bi-clipboard-check me-2"></i>
-          {{ hasCompletedQuiz ? 'Update Quiz' : 'Take Lifestyle Quiz' }}
-        </button>
+        <!-- Only show favorites button if quiz is completed -->
         <router-link v-if="hasCompletedQuiz" to="/favorites" class="btn btn-outline-primary">
           <i class="bi bi-heart me-2"></i>View Favorites
         </router-link>
       </div>
     </div>
 
-    <!-- Quiz Prompt for Authenticated Users -->
+    <!-- Quiz Prompt for Authenticated Users - FIXED -->
     <div v-if="isAuthenticated && !hasCompletedQuiz && !loading" class="alert alert-info">
       <div class="d-flex justify-content-between align-items-center">
         <div>
@@ -133,7 +130,11 @@
             <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
               Real Image
             </div>
+<<<<<<< Updated upstream
             
+=======
+
+>>>>>>> Stashed changes
             <div v-if="!pet.imageLoaded" class="image-loading">
               <i class="bi bi-arrow-repeat spinner"></i>
             </div>
@@ -251,8 +252,13 @@ export default {
       this.isAuthenticated = !!token;
     },
 
+
     async initializePage() {
+<<<<<<< Updated upstream
       // Load the breeds first 
+=======
+      this.checkAuth();
+>>>>>>> Stashed changes
       await this.loadAllBreeds();
 
       // Check if user has completed quiz
@@ -577,6 +583,240 @@ export default {
       this.filteredPets = [...this.pets];
     },
 
+<<<<<<< Updated upstream
+=======
+    async processPetsWithImages(pets) {
+      const processedPets = pets.map(pet => {
+        // Check if pet has a valid image in database
+        const hasValidDatabaseImage = pet.image && pet.image.trim() !== '' && !pet.image.includes('placeholder');
+
+        if (hasValidDatabaseImage) {
+          console.log(`✓ Using database image for ${pet.name}:`, pet.image);
+          return {
+            ...pet,
+            displayImage: pet.image,
+            imageLoaded: false,
+            placeholderImage: false
+          };
+        } else {
+          return {
+            ...pet,
+            displayImage: this.getColoredPlaceholder(pet),
+            imageLoaded: false,
+            placeholderImage: true
+          };
+        }
+      });
+
+      this.fetchApiImagesForPets(processedPets);
+      return processedPets;
+    },
+
+    async fetchApiImagesForPets(pets) {
+      // Only fetch API images for pets that have placeholders
+      const petsNeedingImages = pets.filter(pet => pet.placeholderImage && pet.imageSource === 'placeholder');
+
+      console.log(`🖼 Fetching API images for ${petsNeedingImages.length} pets`);
+
+      const batchSize = 3;
+
+      for (let i = 0; i < petsNeedingImages.length; i += batchSize) {
+        const batch = petsNeedingImages.slice(i, i + batchSize);
+        const promises = batch.map(async (pet) => {
+          try {
+            const apiImage = await this.fetchPetImage(pet);
+            if (apiImage) {
+              pet.displayImage = apiImage;
+              pet.image = apiImage; // Also update the main image field
+              pet.placeholderImage = false;
+              pet.imageSource = 'api';
+
+              // Update reactivity
+              this.pets = [...this.pets];
+              this.filteredPets = [...this.filteredPets];
+            }
+          } catch (error) {
+            console.error(`Failed to fetch API image for ${pet.name}:`, error);
+          }
+        });
+
+        await Promise.allSettled(promises);
+
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < petsNeedingImages.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    },
+
+    async fetchPetImage(pet) {
+      const cacheKey = `${pet.type}-${pet.breed}`;
+      if (this.imageCache.has(cacheKey)) {
+        return this.imageCache.get(cacheKey);
+      }
+
+      try {
+        const breedId = this.findBreedId(pet.breed, pet.type);
+        const apiUrl = pet.type === "dog"
+          ? `${API_BASE_URL}/external/dog-images`
+          : `${API_BASE_URL}/external/cat-images`;
+
+        const params = new URLSearchParams({ limit: "1" });
+        if (breedId) params.append("breed_id", breedId);
+
+        const token = localStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${apiUrl}?${params}`, { headers });
+
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+        const data = await response.json();
+        if (data && data.length > 0 && data[0].url) {
+          const imageUrl = data[0].url;
+          this.imageCache.set(cacheKey, imageUrl);
+          return imageUrl;
+        }
+        return "";
+      } catch (error) {
+        console.error(`Error fetching image for ${pet.name}:`, error);
+        return "";
+      }
+    },
+
+    onImageLoad(pet) {
+      pet.imageLoaded = true;
+      console.log(`✅ Image loaded successfully for ${pet.name} from ${pet.imageSource}`);
+    },
+
+    onImageError(pet) {
+      console.log(`🖼 Image load error for ${pet.name}:`, pet.displayImage);
+
+      // If database image fails, try API image
+      if (pet.imageSource === 'database') {
+        console.log(`🔄 Database image failed, trying API for ${pet.name}`);
+        pet.placeholderImage = true;
+        pet.imageSource = 'placeholder';
+        this.fetchApiImageForSinglePet(pet);
+      }
+      // If API image fails, use colored placeholder
+      else if (pet.imageSource === 'api') {
+        console.log(`🔄 API image failed, using placeholder for ${pet.name}`);
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
+      // If already using placeholder, just mark as loaded
+      else {
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
+
+      pet.imageLoaded = true;
+    },
+
+    // Helper method to fetch API image for single pet
+    async fetchApiImageForSinglePet(pet) {
+      try {
+        const apiImage = await this.fetchPetImage(pet);
+        if (apiImage) {
+          pet.displayImage = apiImage;
+          pet.image = apiImage;
+          pet.placeholderImage = false;
+          pet.imageSource = 'api';
+
+          // Update reactivity
+          this.pets = [...this.pets];
+          this.filteredPets = [...this.filteredPets];
+        } else {
+          pet.displayImage = this.getColoredPlaceholder(pet);
+          pet.placeholderImage = false;
+        }
+      } catch (error) {
+        console.error(`Error fetching API image for ${pet.name}:`, error);
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
+    },
+
+    async toggleFavorite(pet) {
+      if (!this.isAuthenticated) {
+        this.$router.push('/login');
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('authToken');
+
+        if (pet.is_favorite) {
+          // Remove from favorites
+          await fetch(`${API_BASE_URL}/user/favorites/${pet.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          pet.is_favorite = false;
+        } else {
+          // Add to favorites
+          await fetch(`${API_BASE_URL}/user/favorites`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ pet_id: pet.id })
+          });
+          pet.is_favorite = true;
+        }
+
+        // Update the array to trigger reactivity
+        this.pets = [...this.pets];
+        this.filteredPets = [...this.filteredPets];
+
+      } catch (error) {
+        console.error('Error toggling favorite:', error);
+      }
+    },
+
+    getActivityClass(activity) {
+      switch (activity) {
+        case 'low': return 'bg-secondary';
+        case 'medium': return 'bg-warning';
+        case 'high': return 'bg-success';
+        default: return 'bg-info';
+      }
+    },
+
+    applyFilters() {
+      const filtered = this.pets.filter(pet => {
+        const matchesSearch = !this.searchTerm ||
+          pet.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+          pet.breed.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+          pet.personality.toLowerCase().includes(this.searchTerm.toLowerCase());
+
+        const matchesType = !this.filters.type || pet.type === this.filters.type;
+        const matchesSize = !this.filters.size || pet.size === this.filters.size;
+        const matchesScore = !this.hasCompletedQuiz ||
+          pet.compatibility_score >= parseInt(this.filters.minScore);
+
+        return matchesSearch && matchesType && matchesSize && matchesScore;
+      });
+
+      this.filteredPets = filtered;
+    },
+
+    resetFilters() {
+      this.searchTerm = '';
+      this.filters = {
+        type: '',
+        size: '',
+        minScore: '0'
+      };
+      this.filteredPets = [...this.pets];
+    },
+
+>>>>>>> Stashed changes
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
 
