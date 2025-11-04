@@ -68,13 +68,13 @@
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <small class="text-muted">
-                  <i class="bi bi-person-circle me-1"></i>{{ question.author }} • 
+                  <i class="bi bi-person-circle me-1"></i>{{ getAuthorName(question) }} • 
                   <i class="bi bi-calendar3 me-1"></i>{{ formatDate(question.createdAt) }}
                 </small>
               </div>
               <div>
-                <span class="badge bg-light text-dark me-2">{{ question.category }}</span>
-                <span class="badge bg-primary">{{ question.answers.length }} Answers</span>
+                <span class="badge bg-light text-dark me-2">{{ getCategoryLabel(question.category) }}</span>
+                <span class="badge bg-primary">{{ question.answers?.length || 0 }} Answers</span>
               </div>
             </div>
           </div>
@@ -90,7 +90,7 @@
             </div>
             <button class="btn btn-outline-danger btn-sm" @click="toggleQuestionLike(question)">
               <i :class="question.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
-              {{ question.likes }}
+              {{ question.likes || 0 }}
             </button>
           </div>
         </div>
@@ -108,10 +108,10 @@
         <div class="modal-body" v-if="selectedQuestion">
           <div class="mb-3">
             <small class="text-muted">
-              <i class="bi bi-person-circle me-1"></i>{{ selectedQuestion.author }} • 
+              <i class="bi bi-person-circle me-1"></i>{{ getAuthorName(selectedQuestion) }} • 
               {{ formatDate(selectedQuestion.createdAt) }}
             </small>
-            <span class="badge bg-light text-dark ms-2">{{ selectedQuestion.category }}</span>
+            <span class="badge bg-light text-dark ms-2">{{ getCategoryLabel(selectedQuestion.category) }}</span>
           </div>
           <p class="question-content">{{ selectedQuestion.content }}</p>
 
@@ -130,20 +130,20 @@
 
           <h5 class="mb-3">
             <i class="bi bi-chat-left-text me-2"></i>
-            Answers ({{ selectedQuestion.answers.length }})
+            Answers ({{ selectedQuestion.answers?.length || 0 }})
           </h5>
 
-          <div v-if="selectedQuestion.answers.length === 0" class="text-muted text-center py-4">
+          <div v-if="!selectedQuestion.answers || selectedQuestion.answers.length === 0" class="text-muted text-center py-4">
             <i class="bi bi-inbox display-6"></i>
             <p class="mt-2">No answers yet. Be the first to help!</p>
           </div>
 
-          <div class="answers-list">
+          <div class="answers-list" v-else>
             <div v-for="answer in selectedQuestion.answers" :key="answer.id" class="answer-card">
               <div class="d-flex justify-content-between align-items-start">
                 <div>
                   <small class="text-muted">
-                    <i class="bi bi-person-circle me-1"></i>{{ answer.author }} • 
+                    <i class="bi bi-person-circle me-1"></i>{{ getAuthorName(answer) }} • 
                     {{ formatDate(answer.createdAt) }}
                   </small>
                 </div>
@@ -154,11 +154,11 @@
                   </button>
                   <button class="btn btn-outline-primary btn-sm" @click="toggleAnswerLike(answer)">
                     <i :class="answer.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
-                    {{ answer.likes }}
+                    {{ answer.likes || 0 }}
                   </button>
                 </div>
               </div>
-              <p class="answer-content">{{ answer.content }}</p>
+              <p class="answer-content mt-2">{{ answer.content }}</p>
             </div>
           </div>
         </div>
@@ -218,17 +218,19 @@ export default {
       questions: [],
       filteredQuestions: [],
       filters: { category: 'all' },
-     categories: [
-    { label: 'General', value: 'general' },
-    { label: 'Health', value: 'health' },
-    { label: 'Training', value: 'training' },
-    { label: 'Adoption', value: 'adoption' },
-    { label: 'Nutrition', value: 'nutrition' }],
+      categories: [
+        { label: 'General', value: 'general' },
+        { label: 'Health', value: 'health' },
+        { label: 'Training', value: 'training' },
+        { label: 'Adoption', value: 'adoption' },
+        { label: 'Nutrition', value: 'nutrition' }
+      ],
       searchTerm: '',
       loading: true,
       error: null,
       isAuthenticated: false,
       currentUserId: null,
+      currentUserName: '',
 
       // Question detail modal
       showModal: false,
@@ -238,18 +240,83 @@ export default {
 
       // Ask question modal
       showQuestionModal: false,
-      newQuestion: { title: '', content: '', category: 'Adoption' }
+      newQuestion: { title: '', content: '', category: '' }
     };
   },
   async mounted() {
+    console.log('=== Forum Page Debug Info ===');
+    console.log('LocalStorage keys:', Object.keys(localStorage));
+    console.log('authToken:', localStorage.getItem('authToken') ? 'exists' : 'missing');
+    console.log('userId:', localStorage.getItem('userId'));
+    console.log('Checking for user name in localStorage...');
+    ['full_name', 'fullName', 'username', 'userName', 'name', 'email'].forEach(key => {
+      const value = localStorage.getItem(key);
+      if (value) console.log(`  - ${key}: ${value}`);
+    });
+    console.log('=============================');
+    
     this.checkAuth();
     await this.fetchQuestions();
   },
   methods: {
-    checkAuth() {
+    async checkAuth() {
       const token = localStorage.getItem('authToken');
       this.isAuthenticated = !!token;
       this.currentUserId = token ? parseInt(localStorage.getItem('userId')) : null;
+      
+      // Try to get full_name from localStorage
+      this.currentUserName = localStorage.getItem('full_name') || 
+                            localStorage.getItem('fullName') ||
+                            localStorage.getItem('username') || 
+                            localStorage.getItem('userName') || 
+                            localStorage.getItem('name');
+      
+      // If no name found in localStorage, fetch from API
+      if (!this.currentUserName && this.isAuthenticated) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            this.currentUserName = userData.full_name || 'User';
+            // Store it for next time
+            localStorage.setItem('full_name', userData.full_name);
+            console.log('Fetched and stored user name:', this.currentUserName);
+          }
+        } catch (err) {
+          console.error('Failed to fetch user data:', err);
+          this.currentUserName = 'You';
+        }
+      }
+      
+      if (!this.currentUserName) {
+        this.currentUserName = 'You';
+      }
+      
+      console.log('Auth check - User:', this.currentUserName, 'ID:', this.currentUserId);
+    },
+
+    // Get author name - your backend returns 'author' field from full_name
+    getAuthorName(item) {
+      // Your backend already provides 'author' field from users.full_name
+      if (item.author && item.author !== 'Anonymous' && item.author !== 'undefined' && item.author !== null) {
+        return item.author;
+      }
+      
+      // Check if this is current user (for newly created items before page refresh)
+      if (item.author_id === this.currentUserId && this.currentUserName) {
+        return this.currentUserName;
+      }
+      
+      return 'Anonymous';
+    },
+
+    // Get category label from value
+    getCategoryLabel(value) {
+      const cat = this.categories.find(c => c.value === value);
+      return cat ? cat.label : value;
     },
 
     // -------------------------------
@@ -268,7 +335,19 @@ export default {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const data = await response.json();
-        this.questions = data.map(q => ({ ...q, liked: false })); // default like false
+        console.log('Fetched questions:', data);
+        
+        // Log first question structure
+        if (data.length > 0) {
+          console.log('First question fields:', Object.keys(data[0]));
+          console.log('First question:', data[0]);
+        }
+        
+        this.questions = data.map(q => ({ 
+          ...q, 
+          liked: false,
+          answers: q.answers || []
+        }));
         this.filteredQuestions = [...this.questions];
       } catch (err) {
         console.error('Error fetching forum questions:', err);
@@ -301,6 +380,7 @@ export default {
     },
 
     formatDate(isoString) {
+      if (!isoString) return 'Unknown date';
       const date = new Date(isoString);
       return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     },
@@ -312,12 +392,18 @@ export default {
       try {
         const question = this.questions.find(q => q.id === id);
         if (question) {
-          this.selectedQuestion = question;
+          this.selectedQuestion = { ...question };
         } else {
           const res = await fetch(`${API_BASE_URL}/forum/questions/${id}`);
           if (!res.ok) throw new Error('Failed to fetch question detail');
           this.selectedQuestion = await res.json();
         }
+        
+        // Ensure answers array exists
+        if (!this.selectedQuestion.answers) {
+          this.selectedQuestion.answers = [];
+        }
+        
         this.showModal = true;
         this.showAnswerForm = autoOpenAnswer;
         this.newAnswerContent = '';
@@ -338,42 +424,50 @@ export default {
     // Answer
     // -------------------------------
     async submitAnswer() {
-  if (!this.newAnswerContent.trim()) {
-    alert('Answer cannot be empty.');
-    return;
-  }
+      if (!this.newAnswerContent.trim()) {
+        alert('Answer cannot be empty.');
+        return;
+      }
 
-  try {
-    const token = localStorage.getItem('authToken');
-    const res = await fetch(`${API_BASE_URL}/forum/questions/${this.selectedQuestion.id}/answers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ content: this.newAnswerContent })
-    });
+      try {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE_URL}/forum/questions/${this.selectedQuestion.id}/answers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ content: this.newAnswerContent })
+        });
 
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || 'Failed to submit answer');
-    }
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || 'Failed to submit answer');
+        }
 
-    const newAnswer = await res.json();
+        const newAnswer = await res.json();
+        
+        // Add current user's name to the answer
+        newAnswer.author = this.currentUserName;
+        newAnswer.author_id = this.currentUserId;
+        
+        this.selectedQuestion.answers.push(newAnswer);
+        console.log("Answer submitted successfully");
 
-    
-    this.selectedQuestion.answers.push(newAnswer);
-    console.log("Answer submitted successfully");
+        // Update the question in the main list
+        const questionIndex = this.questions.findIndex(q => q.id === this.selectedQuestion.id);
+        if (questionIndex >= 0) {
+          this.questions[questionIndex].answers = [...this.selectedQuestion.answers];
+        }
 
-    this.newAnswerContent = '';
-    this.showAnswerForm = false;
+        this.newAnswerContent = '';
+        this.showAnswerForm = false;
 
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-},
-
+      } catch (err) {
+        console.error(err);
+        alert(err.message);
+      }
+    },
 
     async deleteAnswer(answerId) {
       if (!confirm('Are you sure you want to delete this answer?')) return;
@@ -403,6 +497,11 @@ export default {
     // Like/Unlike Question
     // -------------------------------
     async toggleQuestionLike(question) {
+      if (!this.isAuthenticated) {
+        alert('Please log in to like questions.');
+        return;
+      }
+
       try {
         const token = localStorage.getItem('authToken');
         const res = await fetch(`${API_BASE_URL}/forum/questions/${question.id}/like`, {
@@ -422,6 +521,11 @@ export default {
     },
 
     async toggleAnswerLike(answer) {
+      if (!this.isAuthenticated) {
+        alert('Please log in to like answers.');
+        return;
+      }
+
       try {
         const token = localStorage.getItem('authToken');
         const res = await fetch(`${API_BASE_URL}/forum/answers/${answer.id}/like`, {
@@ -443,10 +547,14 @@ export default {
     // -------------------------------
     // Ask Question Modal
     // -------------------------------
-    openQuestionModal() { this.showQuestionModal = true; },
+    openQuestionModal() { 
+      this.showQuestionModal = true;
+      this.newQuestion = { title: '', content: '', category: '' };
+    },
+    
     closeQuestionModal() {
       this.showQuestionModal = false;
-      this.newQuestion = { title: '', content: '', category: 'Adoption' };
+      this.newQuestion = { title: '', content: '', category: '' };
     },
 
     async submitQuestion() {
@@ -472,6 +580,14 @@ export default {
         }
 
         const createdQuestion = await res.json();
+        
+        // Add current user's name
+        createdQuestion.author = this.currentUserName;
+        createdQuestion.author_id = this.currentUserId;
+        createdQuestion.answers = [];
+        createdQuestion.likes = 0;
+        createdQuestion.liked = false;
+        
         this.questions.unshift(createdQuestion);
         this.filteredQuestions.unshift(createdQuestion);
         this.closeQuestionModal();
@@ -483,7 +599,6 @@ export default {
   }
 };
 </script>
-
 
 <style scoped>
 .question-card {
@@ -515,7 +630,7 @@ export default {
   to {
     transform: rotate(360deg);
   }
-} /* Modal Styles */
+}
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -632,7 +747,7 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-} /* Responsive */
+}
 @media (max-width: 768px) {
   .modal-container {
     max-height: 95vh;
