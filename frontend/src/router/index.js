@@ -39,6 +39,13 @@ const routes = [
 
   },
   {
+    path: '/community', 
+    name: 'Community',
+    component: CommunityPage
+    // No meta - public access
+
+  },
+  {
     path: '/add-pet',  // Changed from /add-adoption
     name: 'AddPet',    // Changed from AddAdoption
     component: AddPetPage,

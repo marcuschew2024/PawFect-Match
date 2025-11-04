@@ -24,8 +24,10 @@
             <li class="nav-item" v-if="isAuthenticated">
               <router-link to="/add-pet" class="nav-link">List a Pet</router-link>
             </li>
-             <li class="nav-item">
-              <router-link to="/community" class="nav-link">Community</router-link>
+            <li class="nav-item">
+              <router-link to="/community" class="nav-link">
+                Community
+              </router-link>
             </li>
 
 
