@@ -182,7 +182,7 @@ def update_pet(pet_id):
     try:
         data = request.get_json()
         
-        # Extract all fields including furColor
+        # Extract pet data (excluding images)
         update_data = {
             'name': data.get('name'),
             'type': data.get('type'),
@@ -191,18 +191,80 @@ def update_pet(pet_id):
             'size': data.get('size'),
             'personality': data.get('personality'),
             'furColor': data.get('furColor'),
-            'image': data.get('image'),
             'available': data.get('available'),
             'updated_at': datetime.now(timezone.utc).isoformat()
         }
         
+        # Handle single image update
+        if data.get('image'):
+            update_data['image'] = data['image']
+            update_data['main_image'] = data['image']
+        
         # Remove None values
         update_data = {k: v for k, v in update_data.items() if v is not None}
         
-        # Update in Supabase
+        # Update pet in Supabase
         response = supabase.table('pets').update(update_data).eq('id', pet_id).execute()
         
         if response.data:
+            # Handle multiple images update if provided
+            if 'images' in data:
+                # Delete existing images
+                supabase.table('pet_images').delete().eq('pet_id', pet_id).execute()
+                
+                # Insert new images
+                images = data['images']
+                if images:
+                    image_records = []
+                    for i, image in enumerate(images):
+                        if isinstance(image, dict) and 'image_url' in image:
+                            image_records.append({
+                                'pet_id': pet_id,
+                                'image_url': image['image_url'],
+                                'image_order': image.get('image_order', i)
+                            })
+                        elif isinstance(image, str) and image.strip():
+                            image_records.append({
+                                'pet_id': pet_id,
+                                'image_url': image.strip(),
+                                'image_order': i
+                            })
+                    
+                    if image_records:
+                        supabase.table('pet_images').insert(image_records).execute()
+                        
+                        # Update main_image to first image
+                        first_image = image_records[0]['image_url']
+                        supabase.table('pets').update({
+                            'main_image': first_image,
+                            'image': first_image
+                        }).eq('id', pet_id).execute()
+            
+            # Return updated pet with images
+            updated_pet = supabase.table('pets').select('''
+                *,
+                pet_images(*)
+            ''').eq('id', pet_id).execute()
+            
+            if updated_pet.data:
+                pet = updated_pet.data[0]
+                images = pet.get('pet_images', [])
+                if not images and pet.get('image'):
+                    images = [{'image_url': pet['image'], 'image_order': 0}]
+                
+                images.sort(key=lambda x: x.get('image_order', 0))
+                
+                pet_response = {
+                    **pet,
+                    'images': images,
+                    'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+                }
+                
+                if 'pet_images' in pet_response:
+                    del pet_response['pet_images']
+                
+                return jsonify(pet_response)
+            
             return jsonify(response.data[0])
         else:
             return jsonify({'error': 'Pet not found'}), 404
@@ -213,21 +275,45 @@ def update_pet(pet_id):
 
 # PET ROUTES - UPDATED TO FILTER ADOPTED PETS
 # PET ROUTES - UPDATED TO FILTER ADOPTED PETS
+# PET ROUTES - UPDATED FOR MULTIPLE IMAGES
 @app.route('/api/pets', methods=['GET'])
 def get_pets():
     try:
-        # Get only available pets from Supabase
-        # Use both available and is_adopted for compatibility
-        response = supabase.table('pets').select('*').eq('available', True).execute()
+        # Get pets with their images
+        response = supabase.table('pets').select('''
+            *,
+            pet_images(*)
+        ''').eq('available', True).execute()
         
         if response.data:
-            # Filter out adopted pets if is_adopted column exists
+            # Filter out adopted pets and format response
             available_pets = []
             for pet in response.data:
-                # If is_adopted column exists and is True, skip this pet
+                # Skip adopted pets
                 if pet.get('is_adopted'):
                     continue
-                available_pets.append(pet)
+                
+                # Format images array
+                images = pet.get('pet_images', [])
+                if not images and pet.get('image'):
+                    # Fallback for pets with only old image field
+                    images = [{'image_url': pet['image'], 'image_order': 0}]
+                
+                # Sort images by order
+                images.sort(key=lambda x: x.get('image_order', 0))
+                
+                # Create pet response with images array
+                pet_response = {
+                    **pet,
+                    'images': images,
+                    'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+                }
+                
+                # Remove the pet_images key to avoid confusion
+                if 'pet_images' in pet_response:
+                    del pet_response['pet_images']
+                
+                available_pets.append(pet_response)
             
             return jsonify(available_pets)
         else:
@@ -240,45 +326,134 @@ def get_pets():
 @app.route('/api/pets/<int:pet_id>', methods=['GET'])
 def get_pet(pet_id):
     try:
-        response = supabase.table('pets').select('*').eq('id', pet_id).execute()
+        response = supabase.table('pets').select('''
+            *,
+            pet_images(*)
+        ''').eq('id', pet_id).execute()
+        
         if not response.data:
             return jsonify({'error': 'Pet not found'}), 404
-        return jsonify(response.data[0])
+        
+        pet = response.data[0]
+        
+        # Format images
+        images = pet.get('pet_images', [])
+        if not images and pet.get('image'):
+            # Fallback for pets with only old image field
+            images = [{'image_url': pet['image'], 'image_order': 0}]
+        
+        # Sort images by order
+        images.sort(key=lambda x: x.get('image_order', 0))
+        
+        # Create response with images array
+        pet_response = {
+            **pet,
+            'images': images,
+            'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+        }
+        
+        # Remove the pet_images key
+        if 'pet_images' in pet_response:
+            del pet_response['pet_images']
+        
+        return jsonify(pet_response)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 # ADD PET ROUTE
+# ADD PET ROUTE - UPDATED FOR MULTIPLE IMAGES
 @app.route('/api/pets', methods=['POST'])
 def create_pet():
     try:
         data = request.get_json()
         
-        # Create pet data for Supabase with ALL fields
+        # Create pet data for Supabase
         pet_data = {
             'name': data.get('name'),
             'type': data.get('type'),
             'breed': data.get('breed'),
             'age': data.get('age'),
             'size': data.get('size'),
-            'gender': data.get('gender'),  # Add this
+            'gender': data.get('gender'),
             'personality': data.get('personality'),
-            'activity_level': data.get('activity_level', 'medium'),  # Add this
-            'furColor': data.get('furColor', ''),  # Add this
-            'vaccination_status': data.get('vaccination_status', 'Unknown'),  # Add this
-            'adoption_fee': data.get('adoption_fee', 0),  # Add this
-            'health_info': data.get('health_info', ''),  # Add this
-            'location': data.get('location', 'Singapore'),  # Add this
-            'image': data.get('image', ''),
+            'activity_level': data.get('activity_level', 'medium'),
+            'furColor': data.get('furColor', ''),
+            'vaccination_status': data.get('vaccination_status', 'Unknown'),
+            'adoption_fee': data.get('adoption_fee', 0),
+            'health_info': data.get('health_info', ''),
+            'location': data.get('location', 'Singapore'),
             'available': True,
-            'is_adopted': False,  # Important for filtering
+            'is_adopted': False,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
+        
+        # Handle single image (backward compatibility)
+        single_image = data.get('image')
+        if single_image:
+            pet_data['main_image'] = single_image
+            pet_data['image'] = single_image  # Keep for backward compatibility
         
         # Insert into Supabase
         response = supabase.table('pets').insert(pet_data).execute()
         
         if response.data:
-            return jsonify(response.data[0]), 201
+            new_pet = response.data[0]
+            pet_id = new_pet['id']
+            
+            # Handle multiple images if provided
+            images = data.get('images', [])
+            if images:
+                # If images is an array of URLs
+                image_records = []
+                for i, image_url in enumerate(images):
+                    if isinstance(image_url, str) and image_url.strip():
+                        image_records.append({
+                            'pet_id': pet_id,
+                            'image_url': image_url.strip(),
+                            'image_order': i
+                        })
+                
+                if image_records:
+                    # Insert all images
+                    supabase.table('pet_images').insert(image_records).execute()
+                    
+                    # Set first image as main_image
+                    first_image = image_records[0]['image_url']
+                    supabase.table('pets').update({
+                        'main_image': first_image,
+                        'image': first_image  # Keep for backward compatibility
+                    }).eq('id', pet_id).execute()
+                    
+                    new_pet['main_image'] = first_image
+                    new_pet['image'] = first_image
+            
+            # Get the complete pet with images
+            complete_pet = supabase.table('pets').select('''
+                *,
+                pet_images(*)
+            ''').eq('id', pet_id).execute()
+            
+            if complete_pet.data:
+                pet_with_images = complete_pet.data[0]
+                # Format the response
+                images_array = pet_with_images.get('pet_images', [])
+                if not images_array and single_image:
+                    images_array = [{'image_url': single_image, 'image_order': 0}]
+                
+                images_array.sort(key=lambda x: x.get('image_order', 0))
+                
+                final_response = {
+                    **pet_with_images,
+                    'images': images_array,
+                    'main_image': pet_with_images.get('main_image') or (images_array[0]['image_url'] if images_array else None)
+                }
+                
+                if 'pet_images' in final_response:
+                    del final_response['pet_images']
+                
+                return jsonify(final_response), 201
+            
+            return jsonify(new_pet), 201
         else:
             print("Supabase error:", response)
             return jsonify({'error': 'Failed to create pet'}), 400
@@ -287,6 +462,80 @@ def create_pet():
         print('Error creating pet:', e)
         return jsonify({'error': f'Failed to create pet: {str(e)}'}), 500
 
+# PET IMAGES MANAGEMENT
+@app.route('/api/pets/<int:pet_id>/images', methods=['POST'])
+def add_pet_images(pet_id):
+    try:
+        data = request.get_json()
+        images = data.get('images', [])
+        
+        if not images:
+            return jsonify({'error': 'No images provided'}), 400
+        
+        # Get current max order
+        current_images = supabase.table('pet_images').select('image_order').eq('pet_id', pet_id).order('image_order', desc=True).execute()
+        start_order = current_images.data[0]['image_order'] + 1 if current_images.data else 0
+        
+        # Prepare image records
+        image_records = []
+        for i, image_url in enumerate(images):
+            if isinstance(image_url, str) and image_url.strip():
+                image_records.append({
+                    'pet_id': pet_id,
+                    'image_url': image_url.strip(),
+                    'image_order': start_order + i
+                })
+        
+        if image_records:
+            # Insert new images
+            response = supabase.table('pet_images').insert(image_records).execute()
+            
+            # Update main_image if this is the first image
+            if start_order == 0 and image_records:
+                first_image = image_records[0]['image_url']
+                supabase.table('pets').update({
+                    'main_image': first_image,
+                    'image': first_image
+                }).eq('id', pet_id).execute()
+            
+            return jsonify({'message': f'Added {len(image_records)} images', 'images': response.data}), 201
+        else:
+            return jsonify({'error': 'No valid images provided'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pets/<int:pet_id>/images/<int:image_id>', methods=['DELETE'])
+def delete_pet_image(pet_id, image_id):
+    try:
+        # Delete the image
+        response = supabase.table('pet_images').delete().eq('id', image_id).eq('pet_id', pet_id).execute()
+        
+        if response.data:
+            # Check if we need to update main_image
+            remaining_images = supabase.table('pet_images').select('*').eq('pet_id', pet_id).order('image_order').execute()
+            
+            if remaining_images.data:
+                # Set new main_image to first remaining image
+                new_main_image = remaining_images.data[0]['image_url']
+                supabase.table('pets').update({
+                    'main_image': new_main_image,
+                    'image': new_main_image
+                }).eq('id', pet_id).execute()
+            else:
+                # No images left, clear main_image
+                supabase.table('pets').update({
+                    'main_image': None,
+                    'image': None
+                }).eq('id', pet_id).execute()
+            
+            return jsonify({'message': 'Image deleted successfully'}), 200
+        else:
+            return jsonify({'error': 'Image not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 @app.route('/api/pets/with-scores', methods=['GET'])
 @token_required
 def get_pets_with_scores(current_user):
@@ -299,24 +548,43 @@ def get_pets_with_scores(current_user):
         
         user_profile = profile_response.data[0]
         
-        # Get only available pets (not adopted)
-        pets_response = supabase.table('pets').select('*').eq('is_adopted', False).execute()
+        # Get available pets with their images
+        pets_response = supabase.table('pets').select('''
+            *,
+            pet_images(*)
+        ''').eq('is_adopted', False).execute()
+        
         pets = pets_response.data
         
         # Calculate scores for each pet
         pets_with_scores = []
         for pet in pets:
+            # Format images
+            images = pet.get('pet_images', [])
+            if not images and pet.get('image'):
+                images = [{'image_url': pet['image'], 'image_order': 0}]
+            
+            images.sort(key=lambda x: x.get('image_order', 0))
+            
             compatibility_score = calculate_compatibility_score(user_profile, pet)
             
             # Get favorite status
             favorite_response = supabase.table('user_favorites').select('id').eq('user_id', current_user).eq('pet_id', pet['id']).execute()
             is_favorite = len(favorite_response.data) > 0
             
-            pets_with_scores.append({
+            # Create pet response with images
+            pet_response = {
                 **pet,
+                'images': images,
+                'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None),
                 'compatibility_score': compatibility_score,
                 'is_favorite': is_favorite
-            })
+            }
+            
+            if 'pet_images' in pet_response:
+                del pet_response['pet_images']
+            
+            pets_with_scores.append(pet_response)
         
         # Sort by compatibility score (highest first)
         pets_with_scores.sort(key=lambda x: x['compatibility_score'], reverse=True)
@@ -683,7 +951,7 @@ def remove_favorite(current_user, pet_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# MATCHING ALGORITHM ( the calculation of pet compatability scores!)
+# MATCHING ALGORITHM
 def calculate_compatibility_score(user_profile, pet):
     """Calculate compatibility score between user and pet (0-100)"""
     score = 0
@@ -816,7 +1084,7 @@ def health_check():
         'framework': 'Flask',
         'authentication': 'JWT + Password Hash'
     })
-#forum
+#----------------------communityPage----------------------------
 # Get all questions with answers and user info
 @app.route('/api/forum/questions', methods=['GET'])
 
@@ -1198,392 +1466,8 @@ def like_forum_answer(current_user, answer_id):
     except Exception as e:
         print(f"Error liking answer: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-
-#forum
-# Get all questions with answers and user info
-@app.route('/api/forum/questions', methods=['GET'])
-
-def get_forum_questions():
-    try:
-        category = request.args.get('category', 'all')
-        search = request.args.get('search', '')
-        
-        # Build query
-        query = supabase.table('forum_questions').select('''
-            *,
-            users!forum_questions_user_id_fkey(id, full_name)
-        ''')
-        
-        # Filter by category if not 'all'
-        if category and category != 'all':
-            query = query.eq('category', category)
-        
-        # Search in title or content
-        if search:
-            query = query.or_(f'title.ilike.%{search}%,content.ilike.%{search}%')
-        
-        # Order by newest first
-        response = query.order('created_at', desc=True).execute()
-        
-        # Format response with answers
-        questions = []
-        for q in response.data:
-            # Get answers for this question
-            answers_response = supabase.table('forum_answers').select('''
-                *,
-                users!forum_answers_user_id_fkey(id, full_name)
-            ''').eq('question_id', q['id']).order('created_at', desc=False).execute()
-            
-            # Format answers
-            formatted_answers = []
-            if answers_response.data:
-                for a in answers_response.data:
-                    formatted_answers.append({
-                        'id': a['id'],
-                        'content': a['content'],
-                        'likes': a['likes'],
-                        'createdAt': a['created_at'],
-                        'author': a['users']['full_name'] if a.get('users') else 'Anonymous',
-                        'author_id': a['user_id']
-                    })
-            
-            question = {
-                'id': q['id'],
-                'title': q['title'],
-                'content': q['content'],
-                'category': q['category'],
-                'likes': q['likes'],
-                'createdAt': q['created_at'],
-                'author': q['users']['full_name'] if q.get('users') else 'Anonymous',
-                'author_id': q['user_id'],
-                'answers': formatted_answers
-            }
-            questions.append(question)
-        
-        return jsonify(questions), 200
-        
-    except Exception as e:
-        print(f"Error fetching questions: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
-# Create new question
-@app.route('/api/forum/questions', methods=['POST'])
-@token_required
-def create_forum_question(current_user):
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        if not data.get('title') or not data.get('content'):
-            return jsonify({'error': 'Title and content are required'}), 400
-        
-        if not data.get('category'):
-            return jsonify({'error': 'Category is required'}), 400
-        
-        # Create question
-        question_data = {
-            'user_id': current_user,
-            'title': data['title'],
-            'content': data['content'],
-            'category': data['category']
-        }
-        
-        response = supabase.table('forum_questions').insert(question_data).execute()
-        
-        if response.data:
-            # Get full question with user info
-            full_question = supabase.table('forum_questions').select('''
-                *,
-                users!forum_questions_user_id_fkey(id, full_name)
-            ''').eq('id', response.data[0]['id']).execute()
-            
-            q = full_question.data[0]
-            return jsonify({
-                'id': q['id'],
-                'title': q['title'],
-                'content': q['content'],
-                'category': q['category'],
-                'likes': q['likes'],
-                'createdAt': q['created_at'],
-                'author': q['users']['full_name'] if q.get('users') else 'Anonymous',
-                'author_id': q['user_id'],
-                'answers': []
-            }), 201
-        
-        return jsonify({'error': 'Failed to create question'}), 400
-        
-    except Exception as e:
-        print(f"Error creating question: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
-# Get single question with details
-@app.route('/api/forum/questions/<int:question_id>', methods=['GET'])
-def get_forum_question(question_id):
-    try:
-        response = supabase.table('forum_questions').select('''
-            *,
-            users!forum_questions_user_id_fkey(id, full_name)
-        ''').eq('id', question_id).execute()
-        
-        if not response.data:
-            return jsonify({'error': 'Question not found'}), 404
-        
-        q = response.data[0]
-        
-        # Get answers for this question
-        answers_response = supabase.table('forum_answers').select('''
-            *,
-            users!forum_answers_user_id_fkey(id, full_name)
-        ''').eq('question_id', question_id).order('created_at', desc=False).execute()
-        
-        formatted_answers = []
-        if answers_response.data:
-            for a in answers_response.data:
-                formatted_answers.append({
-                    'id': a['id'],
-                    'content': a['content'],
-                    'likes': a['likes'],
-                    'createdAt': a['created_at'],
-                    'author': a['users']['full_name'] if a.get('users') else 'Anonymous',
-                    'author_id': a['user_id']
-                })
-        
-        question = {
-            'id': q['id'],
-            'title': q['title'],
-            'content': q['content'],
-            'category': q['category'],
-            'likes': q['likes'],
-            'createdAt': q['created_at'],
-            'author': q['users']['full_name'] if q.get('users') else 'Anonymous',
-            'author_id': q['user_id'],
-            'answers': formatted_answers
-        }
-        
-        return jsonify(question), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# Update question (only owner can update)
-@app.route('/api/forum/questions/<int:question_id>', methods=['PUT'])
-@token_required
-def update_forum_question(current_user, question_id):
-    try:
-        data = request.get_json()
-        
-        # Check ownership
-        question = supabase.table('forum_questions').select('user_id').eq('id', question_id).execute()
-        
-        if not question.data:
-            return jsonify({'error': 'Question not found'}), 404
-        
-        if question.data[0]['user_id'] != current_user:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        # Update question
-        update_data = {
-            'title': data.get('title'),
-            'content': data.get('content'),
-            'category': data.get('category'),
-            'updated_at': datetime.now(timezone.utc).isoformat()
-        }
-        
-        # Remove None values
-        update_data = {k: v for k, v in update_data.items() if v is not None}
-        
-        supabase.table('forum_questions').update(update_data).eq('id', question_id).execute()
-        
-        return jsonify({'message': 'Question updated successfully'}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# Delete question (only owner can delete)
-@app.route('/api/forum/questions/<int:question_id>', methods=['DELETE'])
-@token_required
-def delete_forum_question(current_user, question_id):
-    try:
-        # Check ownership
-        question = supabase.table('forum_questions').select('user_id').eq('id', question_id).execute()
-        
-        if not question.data:
-            return jsonify({'error': 'Question not found'}), 404
-        
-        if question.data[0]['user_id'] != current_user:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        # Delete question (answers will be deleted automatically via CASCADE)
-        supabase.table('forum_questions').delete().eq('id', question_id).execute()
-        
-        return jsonify({'message': 'Question deleted successfully'}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# ==========================================================
-# FORUM ANSWERS
-# ==========================================================
-
-# Create answer to a question
-@app.route('/api/forum/questions/<int:question_id>/answers', methods=['POST'])
-@token_required
-def create_forum_answer(current_user, question_id):
-    try:
-        data = request.get_json()
-        
-        if not data.get('content'):
-            return jsonify({'error': 'Content is required'}), 400
-        
-        # Check if question exists
-        question = supabase.table('forum_questions').select('id').eq('id', question_id).execute()
-        if not question.data:
-            return jsonify({'error': 'Question not found'}), 404
-        
-        # Create answer
-        answer_data = {
-            'question_id': question_id,
-            'user_id': current_user,
-            'content': data['content']
-        }
-        
-        response = supabase.table('forum_answers').insert(answer_data).execute()
-        
-        if response.data:
-            # Get full answer with user info
-            full_answer = supabase.table('forum_answers').select('''
-                *,
-                users!forum_answers_user_id_fkey(id, full_name)
-            ''').eq('id', response.data[0]['id']).execute()
-            
-            a = full_answer.data[0]
-            return jsonify({
-                'id': a['id'],
-                'content': a['content'],
-                'likes': a['likes'],
-                'createdAt': a['created_at'],
-                'author': a['users']['full_name'] if a.get('users') else 'Anonymous',
-                'author_id': a['user_id']
-            }), 201
-        
-        return jsonify({'error': 'Failed to create answer'}), 400
-        
-    except Exception as e:
-        print(f"Error creating answer: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
-# Delete answer (only owner can delete)
-@app.route('/api/forum/answers/<int:answer_id>', methods=['DELETE'])
-@token_required
-def delete_forum_answer(current_user, answer_id):
-    try:
-        # Check ownership
-        answer = supabase.table('forum_answers').select('user_id').eq('id', answer_id).execute()
-        
-        if not answer.data:
-            return jsonify({'error': 'Answer not found'}), 404
-        
-        if answer.data[0]['user_id'] != current_user:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        # Delete answer
-        supabase.table('forum_answers').delete().eq('id', answer_id).execute()
-        
-        return jsonify({'message': 'Answer deleted successfully'}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# ==========================================================
-# FORUM LIKES
-# ==========================================================
-
-# Like/Unlike a question
-@app.route('/api/forum/questions/<int:question_id>/like', methods=['POST'])
-@token_required
-def like_forum_question(current_user, question_id):
-    try:
-        # Check if already liked
-        existing_like = supabase.table('forum_question_likes').select('id').eq('question_id', question_id).eq('user_id', current_user).execute()
-        
-        if existing_like.data:
-            # Unlike - remove like
-            supabase.table('forum_question_likes').delete().eq('question_id', question_id).eq('user_id', current_user).execute()
-            
-            # Decrement likes count
-            question = supabase.table('forum_questions').select('likes').eq('id', question_id).execute()
-            if question.data:
-                new_likes = max(0, question.data[0]['likes'] - 1)
-                supabase.table('forum_questions').update({'likes': new_likes}).eq('id', question_id).execute()
-                return jsonify({'liked': False, 'likes': new_likes}), 200
-        else:
-            # Like - add like
-            supabase.table('forum_question_likes').insert({
-                'question_id': question_id,
-                'user_id': current_user
-            }).execute()
-            
-            # Increment likes count
-            question = supabase.table('forum_questions').select('likes').eq('id', question_id).execute()
-            if question.data:
-                new_likes = question.data[0]['likes'] + 1
-                supabase.table('forum_questions').update({'likes': new_likes}).eq('id', question_id).execute()
-                return jsonify({'liked': True, 'likes': new_likes}), 200
-        
-        return jsonify({'error': 'Question not found'}), 404
-        
-    except Exception as e:
-        print(f"Error liking question: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
-# Like/Unlike an answer
-@app.route('/api/forum/answers/<int:answer_id>/like', methods=['POST'])
-@token_required
-def like_forum_answer(current_user, answer_id):
-    try:
-        # Check if already liked
-        existing_like = supabase.table('forum_answer_likes').select('id').eq('answer_id', answer_id).eq('user_id', current_user).execute()
-        
-        if existing_like.data:
-            # Unlike
-            supabase.table('forum_answer_likes').delete().eq('answer_id', answer_id).eq('user_id', current_user).execute()
-            
-            # Decrement likes count
-            answer = supabase.table('forum_answers').select('likes').eq('id', answer_id).execute()
-            if answer.data:
-                new_likes = max(0, answer.data[0]['likes'] - 1)
-                supabase.table('forum_answers').update({'likes': new_likes}).eq('id', answer_id).execute()
-                return jsonify({'liked': False, 'likes': new_likes}), 200
-        else:
-            # Like
-            supabase.table('forum_answer_likes').insert({
-                'answer_id': answer_id,
-                'user_id': current_user
-            }).execute()
-            
-            # Increment likes count
-            answer = supabase.table('forum_answers').select('likes').eq('id', answer_id).execute()
-            if answer.data:
-                new_likes = answer.data[0]['likes'] + 1
-                supabase.table('forum_answers').update({'likes': new_likes}).eq('id', answer_id).execute()
-                return jsonify({'liked': True, 'likes': new_likes}), 200
-        
-        return jsonify({'error': 'Answer not found'}), 404
-        
-    except Exception as e:
-        print(f"Error liking answer: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=3000)   
 
+# fix backend 
