@@ -1855,3 +1855,4 @@ def like_forum_answer(current_user, answer_id):
 if __name__ == '__main__':
     app.run(debug=True, port=3000)   
 
+# fix backend 
