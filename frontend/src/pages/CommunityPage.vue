@@ -886,9 +886,10 @@ export default {
 }
 
 .btn-pink {
-  background: linear-gradient(135deg, #ff7d82 0%, #fa9696 100%);
-  color: white;
-  border: none !important;
+  /* background: linear-gradient(135deg, #ff7d82 0%, #fa9696 100%); */
+  background-origin: white;
+  color: #ff6b9a;
+  border:  #ff6b9a solid 1px !important;
   padding: 12px 25px;
   font-weight: 600;
   transition: all 0.3s ease;
