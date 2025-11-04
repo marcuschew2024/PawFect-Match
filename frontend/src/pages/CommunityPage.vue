@@ -165,7 +165,7 @@
                 No replies yet. Be the first to respond!
               </div>
 
-              <div v-for="answer in question.answers" :key="answer.id" class="answer-item">
+              <div v-for="answer in sortedAnswers(question.answers)" :key="answer.id" class="answer-item">
                 <div class="d-flex justify-content-between align-items-start">
                   <small class="text-muted">
                     <i class="bi bi-person-circle me-1"></i>{{ answer.author }} •
@@ -179,7 +179,10 @@
                     >
                       Delete
                     </button>
-                    <button class="btn btn-outline-primary btn-sm" @click="toggleAnswerLike(answer)">
+                    <button 
+                      :class="['btn btn-sm', answer.liked ? 'btn-primary' : 'btn-outline-primary']"
+                      @click="toggleAnswerLike(answer)"
+                    >
                       <i :class="answer.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
                       {{ answer.likes }}
                     </button>
@@ -328,6 +331,8 @@ export default {
         const res = await fetch(`${API_BASE_URL}/forum/questions`);
         const data = await res.json();
         this.questions = data.map((q) => ({ ...q, newAnswer: "", liked: false }));
+        // Sort questions by likes in descending order (most liked first)
+        this.questions.sort((a, b) => b.likes - a.likes);
         this.filteredQuestions = [...this.questions];
       } catch (err) {
         this.error = "Failed to load questions.";
@@ -433,6 +438,10 @@ export default {
         const data = await res.json();
         q.liked = data.liked;
         q.likes = data.likes;
+        
+        // Re-sort questions after like update
+        this.questions.sort((a, b) => b.likes - a.likes);
+        this.filteredQuestions = [...this.questions];
       }
     },
     async toggleAnswerLike(a) {
@@ -454,7 +463,14 @@ export default {
         const data = await res.json();
         a.liked = data.liked;
         a.likes = data.likes;
+        // Force re-render to update the sorted order
+        this.$forceUpdate();
       }
+    },
+    
+    // Helper method to sort answers by likes
+    sortedAnswers(answers) {
+      return [...answers].sort((a, b) => b.likes - a.likes);
     },
 
     // Ask Question Modal
