@@ -951,7 +951,7 @@ def remove_favorite(current_user, pet_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# MATCHING ALGORITHM ( the calculation of pet compatability scores!)
+# MATCHING ALGORITHM
 def calculate_compatibility_score(user_profile, pet):
     """Calculate compatibility score between user and pet (0-100)"""
     score = 0
@@ -1466,3 +1466,8 @@ def like_forum_answer(current_user, answer_id):
     except Exception as e:
         print(f"Error liking answer: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=3000)   
+
+# fix backend 
