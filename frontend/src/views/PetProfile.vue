@@ -29,11 +29,11 @@
       <div v-else-if="pet" class="row g-4">
         <!-- Left Column - Pet Image & Actions -->
         <div class="col-xl-5 col-lg-6">
-          <div class="card shadow-sm border-0">
+          <div class="card shadow-sm border-0 sticky-card">
             <div class="card-body p-0">
               <div class="pet-image-container position-relative">
-                <img 
-                  :src="pet.displayImage" 
+                <img
+                  :src="pet.displayImage"
                   :alt="pet.name"
                   class="card-img-top pet-image"
                   :class="{ 'image-loaded': pet.imageLoaded }"
@@ -41,7 +41,7 @@
                   @error="onImageError(pet)"
                   loading="lazy"
                 />
-                
+
                 <!-- Image Loading Overlay -->
                 <div v-if="!pet.imageLoaded" class="image-loading-overlay">
                   <div class="spinner-border text-primary" role="status">
@@ -56,8 +56,7 @@
                 </div>
 
                 <!-- Compatibility Badge -->
-                <div v-if="hasCompletedQuiz && pet.compatibility_score" 
-                     class="compatibility-badge">
+                <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-badge">
                   {{ pet.compatibility_score }}% Match
                 </div>
 
@@ -65,16 +64,25 @@
                 <div v-if="pet.is_adopted" class="status-badge adopted">
                   <i class="bi bi-check-circle me-1"></i>Adopted
                 </div>
-                <div v-else class="status-badge available">
-                  <i class="bi bi-heart me-1"></i>Available
-                </div>
+                <div v-else class="status-badge available">Available</div>
               </div>
+
+              <!-- favourite button-->
+              <button
+                v-if="isAuthenticated"
+                class="favourite-btn"
+                :class="isFavorite ? 'btn-danger' : 'btn-outline-primary'"
+                @click="toggleFavorite"
+                :disabled="favoriteLoading"
+              >
+                <i class="bi" :class="isFavorite ? 'bi-heart-fill' : 'bi-heart'"></i>
+              </button>
 
               <!-- Action Buttons -->
               <div class="p-4">
                 <div class="d-grid gap-3">
                   <!-- Adopt Button -->
-                  <button 
+                  <button
                     v-if="isAuthenticated && !pet.is_adopted"
                     class="btn btn-success btn-lg py-3 fw-bold"
                     @click="startAdoption"
@@ -82,11 +90,11 @@
                   >
                     <span v-if="adopting" class="spinner-border spinner-border-sm me-2"></span>
                     <i v-else class="bi bi-heart me-2"></i>
-                    {{ adopting ? 'Adopting...' : `Adopt ${pet.name}` }}
+                    {{ adopting ? "Adopting..." : `Adopt ${pet.name}` }}
                   </button>
 
                   <!-- Login to Adopt -->
-                  <button 
+                  <button
                     v-else-if="!isAuthenticated && !pet.is_adopted"
                     class="btn btn-success btn-lg py-3 fw-bold"
                     @click="$router.push('/login')"
@@ -99,18 +107,6 @@
                     <i class="bi bi-check-circle-fill text-success display-6 mb-2"></i>
                     <p class="text-muted mb-0">This pet has found a loving home!</p>
                   </div>
-
-                  <!-- Favorite Button -->
-                  <button 
-                    v-if="isAuthenticated"
-                    class="btn py-2"
-                    :class="isFavorite ? 'btn-danger' : 'btn-outline-primary'"
-                    @click="toggleFavorite"
-                    :disabled="favoriteLoading"
-                  >
-                    <i class="bi" :class="isFavorite ? 'bi-heart-fill' : 'bi-heart'"></i>
-                    {{ favoriteLoading ? '...' : (isFavorite ? 'Remove from Favorites' : 'Add to Favorites') }}
-                  </button>
                 </div>
               </div>
             </div>
@@ -122,25 +118,25 @@
           <div class="card shadow-sm border-0 h-100">
             <div class="card-body p-4">
               <!-- Pet Header -->
-              <div class="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom">
-                <div>
-                  <h1 class="pet-name mb-2">{{ pet.name }}</h1>
-                  <div class="d-flex align-items-center gap-3">
-                    <span class="pet-type-badge" :class="pet.type === 'dog' ? 'dog-badge' : 'cat-badge'">
-                      <i :class="pet.type === 'dog' ? 'bi bi-bone' : 'bi bi-bootstrap'"></i>
-                      {{ pet.type === 'dog' ? 'Dog' : 'Cat' }}
-                    </span>
-                    <span class="text-muted">
-                      <i class="bi bi-geo-alt me-1"></i>{{ pet.location || 'Local Shelter' }}
-                    </span>
-                  </div>
+              <div>
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                  <h1 class="pet-name mb-0">{{ pet.name }}</h1>
+                  <span class="pet-type-badge px-3 py-1 rounded-pill fw-semibold text-sm">
+                    {{ pet.type }}
+                  </span>
                 </div>
-                <div v-if="hasCompletedQuiz && pet.compatibility_score" class="text-end">
+                <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom">
+                  <span class="pet-breed text-muted" style="font-size: 0.9rem">
+                    {{ pet.breed }}
+                  </span>
+                </div>
+
+                <!-- <div v-if="hasCompletedQuiz && pet.compatibility_score" class="text-end">
                   <div class="compatibility-score">
                     <div class="score-value">{{ pet.compatibility_score }}%</div>
                     <div class="score-label">Match</div>
                   </div>
-                </div>
+                </div> -->
               </div>
 
               <!-- Basic Information Grid -->
@@ -156,10 +152,10 @@
                 </div>
                 <div class="col-sm-6">
                   <div class="info-item">
-                    <i class="bi bi-tag text-primary"></i>
+                    <i class="bi bi-droplet-half text-primary"></i>
                     <div>
-                      <label>Breed: </label>
-                      <span class="value-spacing">{{ pet.breed }}</span>
+                      <label>Fur Color: </label>
+                      <span class="value-spacing">{{ pet.furColor }}</span>
                     </div>
                   </div>
                 </div>
@@ -186,7 +182,11 @@
                     <i class="bi bi-lightning-charge text-primary"></i>
                     <div>
                       <label>Activity Level: </label>
-                      <span style="margin-left: 8px;" class="badge" :class="getActivityClass(pet.activity_level)">
+                      <span
+                        style="margin-left: 8px"
+                        class="badge"
+                        :class="getActivityClass(pet.activity_level)"
+                      >
                         {{ formatActivityLevel(pet.activity_level) }}
                       </span>
                     </div>
@@ -203,6 +203,15 @@
                   <p class="mb-0">"{{ pet.personality }}"</p>
                 </div>
               </div>
+              <!-- background story -->
+              <div class="mb-4" v-if="pet.background">
+                <h5 class="section-title mb-3">
+                  <i class="bi bi-heart text-danger me-2"></i>Background story
+                </h5>
+                <div class="background-story-card">
+                  <p class="mb-0">"{{ pet.background }}"</p>
+                </div>
+              </div>
 
               <!-- Compatibility Progress -->
               <div v-if="hasCompletedQuiz && pet.compatibility_score" class="mb-4">
@@ -214,9 +223,9 @@
                     <span class="fw-semibold">Your match score with {{ pet.name }}</span>
                     <span class="compatibility-value">{{ pet.compatibility_score }}%</span>
                   </div>
-                  <div class="progress" style="height: 8px;">
-                    <div 
-                      class="progress-bar" 
+                  <div class="progress" style="height: 8px">
+                    <div
+                      class="progress-bar"
                       :class="getCompatibilityClass(pet.compatibility_score)"
                       :style="{ width: pet.compatibility_score + '%' }"
                     ></div>
@@ -240,16 +249,12 @@
                       <div class="info-list-item">
                         <span>Vaccinated</span>
                         <span class="status" :class="getVaccinationStatusClass()">
-                          {{ pet.vaccination_status || 'Unknown' }}
+                          {{ pet.vaccination_status || "Unknown" }}
                         </span>
                       </div>
                       <div class="info-list-item">
-                        <span>Adoption Fee</span>
-                        <span class="status yes">${{ pet.adoption_fee || 'Free' }}</span>
-                      </div>
-                      <div class="info-list-item">
                         <span>Health Status</span>
-                        <span class="status yes">{{ pet.health_info || 'Excellent' }}</span>
+                        <span class="status yes">{{ pet.health_info || "Excellent" }}</span>
                       </div>
                     </div>
                   </div>
@@ -263,18 +268,14 @@
                       <div class="info-list-item">
                         <span>Good with Children</span>
                         <span class="status" :class="pet.good_with_children ? 'yes' : 'no'">
-                          {{ pet.good_with_children ? 'Yes' : 'Unknown' }}
+                          {{ pet.good_with_children ? "Yes" : "Unknown" }}
                         </span>
                       </div>
                       <div class="info-list-item">
                         <span>Good with Other Pets</span>
                         <span class="status" :class="pet.good_with_other_pets ? 'yes' : 'no'">
-                          {{ pet.good_with_other_pets ? 'Yes' : 'Unknown' }}
+                          {{ pet.good_with_other_pets ? "Yes" : "Unknown" }}
                         </span>
-                      </div>
-                      <div class="info-list-item">
-                        <span>Fur Color</span>
-                        <span class="text-muted">{{ pet.furColor || 'Various' }}</span>
                       </div>
                     </div>
                   </div>
@@ -283,33 +284,76 @@
 
               <!-- Care Requirements -->
               <div class="mt-4">
-                <h5 class="section-title mb-3">
+                <h5 class="section-title mb-3" data-bs-toggle="collapse" data-bs-target="#careRequirements" 
+                    style="cursor: pointer;" aria-expanded="false">
                   <i class="bi bi-info-circle text-primary me-2"></i>Care Requirements
+                  <i class="bi bi-chevron-down float-end"></i>
                 </h5>
-                <div class="care-requirements">
-                  <div class="care-item" v-if="pet.activity_level === 'high'">
-                    <i class="bi bi-lightning-charge text-warning"></i>
-                    <span>High energy - needs daily exercise and playtime</span>
+                <div id="careRequirements" class="collapse">
+                  <div class="care-requirements">
+                    <div class="care-item" v-if="pet.activity_level === 'high'">
+                      <i class="bi bi-lightning-charge text-warning"></i>
+                      <span>High energy - needs daily exercise and playtime</span>
+                    </div>
+                    <div class="care-item" v-else-if="pet.activity_level === 'low'">
+                      <i class="bi bi-moon text-secondary"></i>
+                      <span>Low energy - perfect for relaxed home environment</span>
+                    </div>
+                    <div class="care-item" v-else>
+                      <i class="bi bi-sun text-info"></i>
+                      <span>Moderate energy - enjoys regular walks and play</span>
+                    </div>
+                    <div class="care-item" v-if="pet.good_with_children">
+                      <i class="bi bi-emoji-smile text-warning"></i>
+                      <span>Great with children and families</span>
+                    </div>
+                    <div class="care-item" v-if="pet.good_with_other_pets">
+                      <i class="bi bi-people text-success"></i>
+                      <span>Gets along well with other pets</span>
+                    </div>
+                    <div class="care-item">
+                      <i class="bi bi-house-door text-success"></i>
+                      <span>Ideal for {{ getLivingSituation(pet.size) }}</span>
+                    </div>
                   </div>
-                  <div class="care-item" v-else-if="pet.activity_level === 'low'">
-                    <i class="bi bi-moon text-secondary"></i>
-                    <span>Low energy - perfect for relaxed home environment</span>
-                  </div>
-                  <div class="care-item" v-else>
-                    <i class="bi bi-sun text-info"></i>
-                    <span>Moderate energy - enjoys regular walks and play</span>
-                  </div>
-                  <div class="care-item" v-if="pet.good_with_children">
-                    <i class="bi bi-emoji-smile text-warning"></i>
-                    <span>Great with children and families</span>
-                  </div>
-                  <div class="care-item" v-if="pet.good_with_other_pets">
-                    <i class="bi bi-people text-success"></i>
-                    <span>Gets along well with other pets</span>
-                  </div>
-                  <div class="care-item">
-                    <i class="bi bi-house-door text-success"></i>
-                    <span>Ideal for {{ getLivingSituation(pet.size) }}</span>
+                </div>
+              </div>
+              <!--To add extra things here, such as HDB requirements -->
+            <!-- Other Requirements -->
+              <div class="mt-4">
+                <h5 class="section-title mb-3" data-bs-toggle="collapse" data-bs-target="#otherRequirements" 
+                    style="cursor: pointer;" aria-expanded="false">
+                  <i class="bi bi-clipboard-check text-primary me-2"></i>Other Requirements
+                  <i class="bi bi-chevron-down float-end"></i>
+                </h5>
+                <div id="otherRequirements" class="collapse">
+                  <div class="care-requirements">
+                    <div class="care-item2">
+                      <span>Adoption Fee</span>
+                      <span class="status yes">${{ pet.adoption_fee || 'Free' }}</span>
+                    </div>
+                    
+                    <div class="care-item2" v-if="pet.HDB_approved">
+                      <i class="bi bi-building text-success"></i>
+                      <span>{{ getHDBStatus() }}</span>
+                    </div>
+
+                    <div class="care-item2" v-else>
+                      <i class="bi bi-building text-danger"></i>
+                      <span>{{ getHDBStatus() }}</span>
+                    </div>
+
+                    <div class="care-item2" v-if="pet.HDB_approved && pet.type === 'cat'">
+                      <ul class="hdb-checklist">
+                        <li><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>HDB permits up to 2 cats per
+                          household</li> 
+                        <li><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Windows and gates must be
+                          mashed up</li>
+                      </ul>
+                    </div>
+                    <div class="care-item2" v-if="pet.HDB_approved && pet.type === 'dog'">
+                      <span> HDB regulations permit only one dog per flat</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -322,10 +366,10 @@
 </template>
 
 <script>
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = "http://localhost:3000/api";
 
 export default {
-  name: 'PetProfile',
+  name: "PetProfile",
   data() {
     return {
       pet: null,
@@ -338,108 +382,196 @@ export default {
       adopting: false,
       imageCache: new Map(),
       allDogBreeds: [],
-      allCatBreeds: []
-    }
+      allCatBreeds: [],
+      HDB_approved: null,
+    };
   },
+
   async mounted() {
     await this.initializePage();
   },
   watch: {
-    '$route.params.petId': {
+    "$route.params.petId": {
       handler() {
         this.initializePage();
       },
-      immediate: false
-    }
+      immediate: false,
+    },
   },
   methods: {
+    // async initializePage() {
+    //   this.checkAuth();
+    //   await this.loadAllBreeds();
+    //   await this.loadPetDetails();
+    //   if (this.isAuthenticated) {
+    //     await Promise.all([this.checkQuizCompletion(), this.checkFavoriteStatus()]);
+    //   }
+    // },
     async initializePage() {
       this.checkAuth();
       await this.loadAllBreeds();
-      await this.loadPetDetails();
+      
+      // Check quiz completion FIRST if authenticated
       if (this.isAuthenticated) {
-        await Promise.all([
-          this.checkQuizCompletion(),
-          this.checkFavoriteStatus()
-        ]);
+        await this.checkQuizCompletion();
+      }
+      
+      // NOW load pet details (it can use hasCompletedQuiz correctly)
+      await this.loadPetDetails();
+      
+      // Check favorite status
+      if (this.isAuthenticated) {
+        await this.checkFavoriteStatus();
       }
     },
 
+
+
     checkAuth() {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem("authToken");
       this.isAuthenticated = !!token;
     },
 
+    // async loadPetDetails() {
+    //   this.loading = true;
+    //   this.error = null;
+
+    //   try {
+    //     // get petID from the URL
+    //     const petId = this.$route.params.petId;
+    //     console.log("Loading pet details for ID:", petId);
+    //     // If user has logged in, they would be sent to the login page
+    //     const token = localStorage.getItem("authToken");
+    //     const headers = {
+    //       "Content-Type": "application/json",
+    //     };
+
+    //     if (token) {
+    //       headers["Authorization"] = `Bearer ${token}`;
+    //     }
+
+    //     // Try to get pet with compatibility scores if authenticated and quiz completed + fetch pet data from API
+    //     let url = `${API_BASE_URL}/pets/${petId}`;
+    //     let response = await fetch(url, { headers });
+
+    //     if (!response.ok && this.isAuthenticated) {
+    //       // If regular endpoint fails and user is authenticated, try with scores
+    //       const allPetsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, { headers });
+    //       if (allPetsResponse.ok) {
+    //         const allPets = await allPetsResponse.json();
+    //         const specificPet = allPets.find((p) => p.id === parseInt(petId));
+    //         if (specificPet) {
+    //           this.pet = await this.processPetWithImages(specificPet);
+    //           this.loading = false;
+    //           return;
+    //         }
+    //       }
+    //     }
+
+    //     if (response.ok) {
+    //       const petData = await response.json();
+    //       this.pet = await this.processPetWithImages(petData);
+    //       console.log("Pet data loaded with images:", this.pet);
+    //     } else if (response.status === 404) {
+    //       this.error = "Pet not found.";
+    //     } else {
+    //       const errorData = await response.json().catch(() => ({}));
+    //       this.error = errorData.error || "Error loading pet details.";
+    //     }
+    //   } catch (error) {
+    //     console.error("Error loading pet:", error);
+    //     this.error = "Network error. Please try again.";
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
     async loadPetDetails() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const petId = this.$route.params.petId;
-        console.log('Loading pet details for ID:', petId);
+        console.log("Loading pet details for ID:", petId);
         
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem("authToken");
         const headers = {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         };
-        
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
 
-        // Try to get pet with compatibility scores if authenticated and quiz completed
-        let url = `${API_BASE_URL}/pets/${petId}`;
-        let response = await fetch(url, { headers });
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    //If authenticated AND has completed quiz, try to get scores first
+    if (this.isAuthenticated && this.hasCompletedQuiz) {
+      console.log("✅ User is authenticated and has completed quiz - fetching with scores");
+      
+      try {
+        const allPetsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, { headers });
         
-        if (!response.ok && this.isAuthenticated) {
-          // If regular endpoint fails and user is authenticated, try with scores
-          const allPetsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, { headers });
-          if (allPetsResponse.ok) {
-            const allPets = await allPetsResponse.json();
-            const specificPet = allPets.find(p => p.id === parseInt(petId));
-            if (specificPet) {
-              this.pet = await this.processPetWithImages(specificPet);
-              this.loading = false;
-              return;
-            }
+        if (allPetsResponse.ok) {
+          const allPets = await allPetsResponse.json();
+          console.log("📊 Fetched pets with scores:", allPets.length);
+          
+          const specificPet = allPets.find((p) => p.id === parseInt(petId));
+          
+          if (specificPet) {
+            console.log("✅ Found pet with compatibility score:", specificPet.compatibility_score);
+            this.pet = await this.processPetWithImages(specificPet);
+            this.loading = false;
+            return; // SUCCESS - exit here
+          } else {
+            console.log("⚠️ Pet not found in scored list, falling back to regular endpoint");
           }
-        }
-
-        if (response.ok) {
-          const petData = await response.json();
-          this.pet = await this.processPetWithImages(petData);
-          console.log('Pet data loaded with images:', this.pet);
-        } else if (response.status === 404) {
-          this.error = 'Pet not found.';
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          this.error = errorData.error || 'Error loading pet details.';
+          console.log("⚠️ Failed to fetch scored pets:", allPetsResponse.status);
         }
       } catch (error) {
-        console.error('Error loading pet:', error);
-        this.error = 'Network error. Please try again.';
-      } finally {
-        this.loading = false;
+        console.log("⚠️ Error fetching scored pets:", error);
       }
-    },
+    } else {
+      console.log("ℹ️ User not authenticated or no quiz - using regular endpoint");
+    }
+
+    // FALLBACK: Use regular endpoint (without scores)
+    console.log("📡 Fetching pet from regular endpoint");
+    const response = await fetch(`${API_BASE_URL}/pets/${petId}`, { headers });
+
+    if (response.ok) {
+      const petData = await response.json();
+      console.log("✅ Pet data loaded (no score):", petData.name);
+      this.pet = await this.processPetWithImages(petData);
+    } else if (response.status === 404) {
+      this.error = "Pet not found.";
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      this.error = errorData.error || "Error loading pet details.";
+    }
+  } catch (error) {
+    console.error("❌ Error loading pet:", error);
+    this.error = "Network error. Please try again.";
+  } finally {
+    this.loading = false;
+  }
+},
 
     async processPetWithImages(pet) {
       // Use the same image processing logic as PetListingPage
-      if (pet.image && pet.image.trim() !== '') {
+      if (pet.image && pet.image.trim() !== "") {
         return {
           ...pet,
           displayImage: pet.image,
           imageLoaded: false,
-          placeholderImage: false
+          placeholderImage: false,
         };
       } else {
         const processedPet = {
           ...pet,
           displayImage: this.getColoredPlaceholder(pet),
           imageLoaded: false,
-          placeholderImage: true
+          placeholderImage: true,
         };
-        
+
         // Try to fetch API image for this pet
         await this.fetchApiImageForPet(processedPet);
         return processedPet;
@@ -448,7 +580,7 @@ export default {
 
     async fetchApiImageForPet(pet) {
       if (!pet.placeholderImage) return;
-      
+
       try {
         const apiImage = await this.fetchPetImage(pet);
         if (apiImage) {
@@ -466,24 +598,25 @@ export default {
       if (this.imageCache.has(cacheKey)) {
         return this.imageCache.get(cacheKey);
       }
-      
+
       try {
         const breedId = this.findBreedId(pet.breed, pet.type);
-        const apiUrl = pet.type === "dog" 
-          ? `${API_BASE_URL}/external/dog-images`
-          : `${API_BASE_URL}/external/cat-images`;
-        
+        const apiUrl =
+          pet.type === "dog"
+            ? `${API_BASE_URL}/external/dog-images`
+            : `${API_BASE_URL}/external/cat-images`;
+
         const params = new URLSearchParams({ limit: "1" });
         if (breedId) params.append("breed_id", breedId);
-        
-        const token = localStorage.getItem('authToken');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
+        const token = localStorage.getItem("authToken");
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
         const response = await fetch(`${apiUrl}?${params}`, { headers });
-        
+
         if (!response.ok) throw new Error(`API error: ${response.status}`);
-        
+
         const data = await response.json();
         if (data && data.length > 0 && data[0].url) {
           const imageUrl = data[0].url;
@@ -500,24 +633,25 @@ export default {
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
       if (!breeds.length) return null;
-      const breed = breeds.find(b => 
-        b.name.toLowerCase().includes(breedName.toLowerCase()) ||
-        breedName.toLowerCase().includes(b.name.toLowerCase())
+      const breed = breeds.find(
+        (b) =>
+          b.name.toLowerCase().includes(breedName.toLowerCase()) ||
+          breedName.toLowerCase().includes(b.name.toLowerCase())
       );
       return breed ? breed.id : null;
     },
 
     async loadAllBreeds() {
       try {
-        const token = localStorage.getItem('authToken');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+        const token = localStorage.getItem("authToken");
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
         const [dogResponse, catResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
-          fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
+          fetch(`${API_BASE_URL}/external/cat-breeds`, { headers }),
         ]);
-        
+
         if (dogResponse.ok && catResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
           this.allCatBreeds = await catResponse.json();
@@ -529,13 +663,13 @@ export default {
 
     getColoredPlaceholder(pet) {
       const colors = {
-        dog: ['#ffb6c1', '#ffd1dc', '#ffecb3', '#c8e6c9'],
-        cat: ['#bbdefb', '#c5cae9', '#e1bee7', '#f8bbd0']
+        dog: ["#ffb6c1", "#ffd1dc", "#ffecb3", "#c8e6c9"],
+        cat: ["#bbdefb", "#c5cae9", "#e1bee7", "#f8bbd0"],
       };
       const typeColors = colors[pet.type] || colors.dog;
       const color = typeColors[pet.id % typeColors.length];
-      const emoji = pet.type === 'dog' ? '🐕' : '🐱';
-      
+      const emoji = pet.type === "dog" ? "🐕" : "🐱";
+
       return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect fill='${color}' width='400' height='300'/%3E%3Ctext fill='%23666' font-size='48' font-family='system-ui' x='200' y='150' text-anchor='middle' dominant-baseline='middle'%3E${emoji}%3C/text%3E%3Ctext fill='%23333' font-size='24' font-family='system-ui' x='200' y='200' text-anchor='middle'%3E${pet.name}%3C/text%3E%3C/svg%3E`;
     },
 
@@ -553,27 +687,30 @@ export default {
 
     async checkQuizCompletion() {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem("authToken");
         const response = await fetch(`${API_BASE_URL}/user/quiz`, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
-        
+
         this.hasCompletedQuiz = response.ok;
+        console.log("Has completed quiz:", this.hasCompletedQuiz);
+        const data = await response.json();
+        console.log("data", data);
       } catch (error) {
-        console.log('No quiz results found');
+        console.log("No quiz results found");
         this.hasCompletedQuiz = false;
       }
     },
 
     async checkFavoriteStatus() {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem("authToken");
         const response = await fetch(`${API_BASE_URL}/user/favorites`, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (response.ok) {
@@ -581,47 +718,47 @@ export default {
           this.isFavorite = favoriteIds.includes(parseInt(this.$route.params.petId));
         }
       } catch (error) {
-        console.error('Error checking favorite status:', error);
+        console.error("Error checking favorite status:", error);
       }
     },
 
     async toggleFavorite() {
       if (!this.isAuthenticated) {
-        this.$router.push('/login');
+        this.$router.push("/login");
         return;
       }
 
       this.favoriteLoading = true;
       try {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem("authToken");
         const petId = this.$route.params.petId;
 
         if (this.isFavorite) {
           // Remove from favorites
           await fetch(`${API_BASE_URL}/user/favorites/${petId}`, {
-            method: 'DELETE',
+            method: "DELETE",
             headers: {
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           });
           this.isFavorite = false;
-          this.showToast('Removed from favorites', 'success');
+          this.showToast("Removed from favorites", "success");
         } else {
           // Add to favorites
           await fetch(`${API_BASE_URL}/user/favorites`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ pet_id: parseInt(petId) })
+            body: JSON.stringify({ pet_id: parseInt(petId) }),
           });
           this.isFavorite = true;
-          this.showToast('Added to favorites!', 'success');
+          this.showToast("Added to favorites!", "success");
         }
       } catch (error) {
-        console.error('Error toggling favorite:', error);
-        this.showToast('Failed to update favorites. Please try again.', 'error');
+        console.error("Error toggling favorite:", error);
+        this.showToast("Failed to update favorites. Please try again.", "error");
       } finally {
         this.favoriteLoading = false;
       }
@@ -629,31 +766,33 @@ export default {
 
     async startAdoption() {
       if (!this.isAuthenticated) {
-        this.$router.push('/login');
+        this.$router.push("/login");
         return;
       }
 
       if (this.pet.is_adopted) {
-        this.showToast('This pet has already been adopted!', 'error');
+        this.showToast("This pet has already been adopted!", "error");
         return;
       }
 
       // Use the same approach as PetListingPage - navigate to adoption form
-      console.log('Starting adoption for pet:', this.pet.id);
+      console.log("Starting adoption for pet:", this.pet.id);
       this.$router.push(`/adopt/${this.pet.id}`);
     },
 
-    showToast(message, type = 'info') {
+    showToast(message, type = "info") {
       // Simple toast notification
-      const toast = document.createElement('div');
-      toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show position-fixed`;
-      toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+      const toast = document.createElement("div");
+      toast.className = `alert alert-${
+        type === "error" ? "danger" : "success"
+      } alert-dismissible fade show position-fixed`;
+      toast.style.cssText = "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
       toast.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       `;
       document.body.appendChild(toast);
-      
+
       // Auto remove after 5 seconds
       setTimeout(() => {
         if (toast.parentNode) {
@@ -664,62 +803,71 @@ export default {
 
     getActivityClass(activity) {
       const activityMap = {
-        'low': 'bg-secondary text-white',
-        'medium': 'bg-warning text-dark', 
-        'high': 'bg-success text-white'
+        low: "bg-secondary text-white",
+        medium: "bg-warning text-dark",
+        high: "bg-success text-white",
       };
-      return activityMap[activity] || 'bg-info text-white';
+      return activityMap[activity] || "bg-info text-white";
     },
 
     formatActivityLevel(activity) {
       const activityMap = {
-        'low': 'Low',
-        'medium': 'Medium',
-        'high': 'High'
+        low: "Low",
+        medium: "Medium",
+        high: "High",
       };
-      return activityMap[activity] || 'Medium';
+      return activityMap[activity] || "Medium";
     },
 
     getVaccinationStatusClass() {
       const status = this.pet.vaccination_status?.toLowerCase();
-      if (status?.includes('up to date') || status?.includes('vaccinated')) {
-        return 'yes';
-      } else if (status?.includes('not') || status?.includes('unknown')) {
-        return 'no';
+      if (status?.includes("up to date") || status?.includes("vaccinated")) {
+        return "yes";
+      } else if (status?.includes("not") || status?.includes("unknown")) {
+        return "no";
       }
-      return 'yes';
+      return "yes";
     },
 
     getCompatibilityClass(score) {
-      if (score >= 80) return 'bg-success';
-      if (score >= 60) return 'bg-warning';
-      return 'bg-danger';
+      if (score >= 80) return "bg-success";
+      if (score >= 60) return "bg-warning";
+      return "bg-danger";
     },
 
     getCompatibilityDescription(score) {
-      if (score >= 80) return 'Excellent match! This pet fits perfectly with your lifestyle.';
-      if (score >= 60) return 'Good match! This pet would be a great companion.';
-      if (score >= 40) return 'Fair match. Consider if you can accommodate their needs.';
-      return 'This pet may not be the best fit for your current situation.';
+      if (score >= 80) return "Excellent match! This pet fits perfectly with your lifestyle.";
+      if (score >= 60) return "Good match! This pet would be a great companion.";
+      if (score >= 40) return "Fair match. Consider if you can accommodate their needs.";
+      return "This pet may not be the best fit for your current situation.";
     },
 
     getLivingSituation(size) {
       const sizeMap = {
-        'Small': 'apartments and small homes',
-        'Medium': 'most homes with some space',
-        'Large': 'homes with yards or large spaces'
+        Small: "apartments and small homes",
+        Medium: "most homes with some space",
+        Large: "homes with yards or large spaces",
       };
-      return sizeMap[size] || 'various living situations';
-    }
-  }
-}
+      return sizeMap[size] || "various living situations";
+    },
+    getHDBStatus() {
+      return this.pet.HDB_approved ? "HDB approved" : "Not HDB approved";
+    },
+  },
+};
 </script>
 
 <style scoped>
+.sticky-card {
+  position: sticky;
+  top: 20px;
+  align-self: flex-start;
+}
+
 .pet-profile-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 1rem 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f2f5f8 100%);
+  padding: 1rem 0 0 0;
 }
 
 /* Image Container */
@@ -734,10 +882,18 @@ export default {
   justify-content: center;
 }
 
-.pet-image {
+/* .pet-image {
   height: 350px;
   object-fit: cover;
   transition: all 0.3s ease;
+} */
+
+/*making the image slightly longer ( cos sometimes it gets cropped off) */
+.pet-image {
+  width: 100%;
+  height: 400px; /* ⬆️ Increase this number to make it taller */
+  object-fit: cover; /* fills the box; may crop slightly */
+  border-radius: 0.5rem;
 }
 
 .pet-image:hover {
@@ -803,12 +959,12 @@ export default {
 }
 
 .status-badge.available {
-  background: linear-gradient(135deg, #4ECDC4, #6EE7E7);
+  background: linear-gradient(135deg, #4ecdc4, #6ee7e7);
   color: white;
 }
 
 .status-badge.adopted {
-  background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
   color: white;
 }
 
@@ -818,10 +974,15 @@ export default {
 }
 
 .pet-type-badge {
-  padding: 6px 12px;
+  /* padding: 6px 12px;
   border-radius: 20px;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.8rem; */
+
+  background-color: #e0f2fe; /* soft sky blue */
+  color: #0369a1; /* deep blue text */
+  font-size: 0.9rem;
+  text-transform: capitalize;
 }
 
 .dog-badge {
@@ -844,6 +1005,8 @@ export default {
   font-size: 2rem;
   font-weight: 700;
   background: linear-gradient(135deg, #667eea, #764ba2);
+  /* added line below to prevent error */
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   line-height: 1;
@@ -862,7 +1025,7 @@ export default {
   padding: 12px;
   background: #f8f9fa;
   border-radius: 8px;
-  border-left: 4px solid #4ECDC4;
+  border-left: 4px solid #4ecdc4;
 }
 
 .section-title {
@@ -881,6 +1044,15 @@ export default {
   color: #666;
 }
 
+.background-story-card {
+  background: linear-gradient(135deg, #e6f0ff, #cce0ff);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 4px solid #0071b6;
+  font-style: italic;
+  color: #666;
+}
+
 .compatibility-progress {
   background: white;
   padding: 1.5rem;
@@ -891,7 +1063,7 @@ export default {
 .compatibility-value {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #4ECDC4;
+  color: #4ecdc4;
 }
 
 .info-card {
@@ -940,18 +1112,28 @@ export default {
   padding: 12px;
   background: #f8f9fa;
   border-radius: 8px;
-  border-left: 4px solid #4ECDC4;
+  border-left: 4px solid #4ecdc4;
+}
+
+.care-item2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #d94e98;
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #4ECDC4, #6EE7E7);
+  background: linear-gradient(135deg, #4ecdc4, #6ee7e7);
   border: none;
   font-weight: 600;
   transition: all 0.3s ease;
 }
 
 .btn-success:hover:not(:disabled) {
-  background: linear-gradient(135deg, #26A69A, #4ECDC4);
+  background: linear-gradient(135deg, #26a69a, #4ecdc4);
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
 }
@@ -970,19 +1152,90 @@ export default {
 .value-spacing {
   margin-left: 8px;
 }
+/* styling of the favourite button */
+.favourite-btn {
+  position: absolute;
+  bottom: 120px;
+  right: 16px;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  padding: 8px 16px;
+  z-index: 3;
+}
+/* make button bigger when hovered over */
+.favourite-btn:hover {
+  background: white;
+  transform: scale(1.1);
+}
+/* make button red when clicked */
+.favourite-btn.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.hdb-checklist {
+  list-style: none !important;
+  /* remove default bullets */
+  padding-left: 0;
+  margin: 0;
+}
+
+.hdb-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* space between icon and text */
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-left: 4px solid #ffc107;
+  /* yellow accent like warning */
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.section-title[data-bs-toggle="collapse"] {
+  transition: all 0.3s ease;
+}
+
+.section-title[data-bs-toggle="collapse"]:hover {
+  color: #4ECDC4 !important;
+}
+
+.section-title[data-bs-toggle="collapse"] .bi-chevron-down {
+  transition: transform 0.3s ease;
+}
+
+.section-title[data-bs-toggle="collapse"][aria-expanded="false"] .bi-chevron-down {
+  transform: rotate(-90deg);
+}
+
+.collapse {
+  transition: height 0.35s ease;
+}
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .pet-name {
     font-size: 1.75rem;
   }
-  
+
   .pet-image {
     height: 280px;
   }
-  
+
   .compatibility-score {
     margin-top: 1rem;
+  }
+
+  .status-badge {
+    top: 60px;
+  }
+
+  .favourite-btn {
+    bottom: 160px;
   }
 }
 
@@ -990,11 +1243,11 @@ export default {
   .container {
     padding: 0 10px;
   }
-  
+
   .pet-image {
     height: 250px;
   }
-  
+
   .btn-lg {
     padding: 0.75rem 1rem;
     font-size: 1rem;

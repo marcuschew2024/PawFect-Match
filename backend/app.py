@@ -816,6 +816,388 @@ def health_check():
         'framework': 'Flask',
         'authentication': 'JWT + Password Hash'
     })
+#forum
+# Get all questions with answers and user info
+@app.route('/api/forum/questions', methods=['GET'])
+
+def get_forum_questions():
+    try:
+        category = request.args.get('category', 'all')
+        search = request.args.get('search', '')
+        
+        # Build query
+        query = supabase.table('forum_questions').select('''
+            *,
+            users!forum_questions_user_id_fkey(id, full_name)
+        ''')
+        
+        # Filter by category if not 'all'
+        if category and category != 'all':
+            query = query.eq('category', category)
+        
+        # Search in title or content
+        if search:
+            query = query.or_(f'title.ilike.%{search}%,content.ilike.%{search}%')
+        
+        # Order by newest first
+        response = query.order('created_at', desc=True).execute()
+        
+        # Format response with answers
+        questions = []
+        for q in response.data:
+            # Get answers for this question
+            answers_response = supabase.table('forum_answers').select('''
+                *,
+                users!forum_answers_user_id_fkey(id, full_name)
+            ''').eq('question_id', q['id']).order('created_at', desc=False).execute()
+            
+            # Format answers
+            formatted_answers = []
+            if answers_response.data:
+                for a in answers_response.data:
+                    formatted_answers.append({
+                        'id': a['id'],
+                        'content': a['content'],
+                        'likes': a['likes'],
+                        'createdAt': a['created_at'],
+                        'author': a['users']['full_name'] if a.get('users') else 'Anonymous',
+                        'author_id': a['user_id']
+                    })
+            
+            question = {
+                'id': q['id'],
+                'title': q['title'],
+                'content': q['content'],
+                'category': q['category'],
+                'likes': q['likes'],
+                'createdAt': q['created_at'],
+                'author': q['users']['full_name'] if q.get('users') else 'Anonymous',
+                'author_id': q['user_id'],
+                'answers': formatted_answers
+            }
+            questions.append(question)
+        
+        return jsonify(questions), 200
+        
+    except Exception as e:
+        print(f"Error fetching questions: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Create new question
+@app.route('/api/forum/questions', methods=['POST'])
+@token_required
+def create_forum_question(current_user):
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('title') or not data.get('content'):
+            return jsonify({'error': 'Title and content are required'}), 400
+        
+        if not data.get('category'):
+            return jsonify({'error': 'Category is required'}), 400
+        
+        # Create question
+        question_data = {
+            'user_id': current_user,
+            'title': data['title'],
+            'content': data['content'],
+            'category': data['category']
+        }
+        
+        response = supabase.table('forum_questions').insert(question_data).execute()
+        
+        if response.data:
+            # Get full question with user info
+            full_question = supabase.table('forum_questions').select('''
+                *,
+                users!forum_questions_user_id_fkey(id, full_name)
+            ''').eq('id', response.data[0]['id']).execute()
+            
+            q = full_question.data[0]
+            return jsonify({
+                'id': q['id'],
+                'title': q['title'],
+                'content': q['content'],
+                'category': q['category'],
+                'likes': q['likes'],
+                'createdAt': q['created_at'],
+                'author': q['users']['full_name'] if q.get('users') else 'Anonymous',
+                'author_id': q['user_id'],
+                'answers': []
+            }), 201
+        
+        return jsonify({'error': 'Failed to create question'}), 400
+        
+    except Exception as e:
+        print(f"Error creating question: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Get single question with details
+@app.route('/api/forum/questions/<int:question_id>', methods=['GET'])
+def get_forum_question(question_id):
+    try:
+        response = supabase.table('forum_questions').select('''
+            *,
+            users!forum_questions_user_id_fkey(id, full_name)
+        ''').eq('id', question_id).execute()
+        
+        if not response.data:
+            return jsonify({'error': 'Question not found'}), 404
+        
+        q = response.data[0]
+        
+        # Get answers for this question
+        answers_response = supabase.table('forum_answers').select('''
+            *,
+            users!forum_answers_user_id_fkey(id, full_name)
+        ''').eq('question_id', question_id).order('created_at', desc=False).execute()
+        
+        formatted_answers = []
+        if answers_response.data:
+            for a in answers_response.data:
+                formatted_answers.append({
+                    'id': a['id'],
+                    'content': a['content'],
+                    'likes': a['likes'],
+                    'createdAt': a['created_at'],
+                    'author': a['users']['full_name'] if a.get('users') else 'Anonymous',
+                    'author_id': a['user_id']
+                })
+        
+        question = {
+            'id': q['id'],
+            'title': q['title'],
+            'content': q['content'],
+            'category': q['category'],
+            'likes': q['likes'],
+            'createdAt': q['created_at'],
+            'author': q['users']['full_name'] if q.get('users') else 'Anonymous',
+            'author_id': q['user_id'],
+            'answers': formatted_answers
+        }
+        
+        return jsonify(question), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Update question (only owner can update)
+@app.route('/api/forum/questions/<int:question_id>', methods=['PUT'])
+@token_required
+def update_forum_question(current_user, question_id):
+    try:
+        data = request.get_json()
+        
+        # Check ownership
+        question = supabase.table('forum_questions').select('user_id').eq('id', question_id).execute()
+        
+        if not question.data:
+            return jsonify({'error': 'Question not found'}), 404
+        
+        if question.data[0]['user_id'] != current_user:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Update question
+        update_data = {
+            'title': data.get('title'),
+            'content': data.get('content'),
+            'category': data.get('category'),
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Remove None values
+        update_data = {k: v for k, v in update_data.items() if v is not None}
+        
+        supabase.table('forum_questions').update(update_data).eq('id', question_id).execute()
+        
+        return jsonify({'message': 'Question updated successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Delete question (only owner can delete)
+@app.route('/api/forum/questions/<int:question_id>', methods=['DELETE'])
+@token_required
+def delete_forum_question(current_user, question_id):
+    try:
+        # Check ownership
+        question = supabase.table('forum_questions').select('user_id').eq('id', question_id).execute()
+        
+        if not question.data:
+            return jsonify({'error': 'Question not found'}), 404
+        
+        if question.data[0]['user_id'] != current_user:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Delete question (answers will be deleted automatically via CASCADE)
+        supabase.table('forum_questions').delete().eq('id', question_id).execute()
+        
+        return jsonify({'message': 'Question deleted successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ==========================================================
+# FORUM ANSWERS
+# ==========================================================
+
+# Create answer to a question
+@app.route('/api/forum/questions/<int:question_id>/answers', methods=['POST'])
+@token_required
+def create_forum_answer(current_user, question_id):
+    try:
+        data = request.get_json()
+        
+        if not data.get('content'):
+            return jsonify({'error': 'Content is required'}), 400
+        
+        # Check if question exists
+        question = supabase.table('forum_questions').select('id').eq('id', question_id).execute()
+        if not question.data:
+            return jsonify({'error': 'Question not found'}), 404
+        
+        # Create answer
+        answer_data = {
+            'question_id': question_id,
+            'user_id': current_user,
+            'content': data['content']
+        }
+        
+        response = supabase.table('forum_answers').insert(answer_data).execute()
+        
+        if response.data:
+            # Get full answer with user info
+            full_answer = supabase.table('forum_answers').select('''
+                *,
+                users!forum_answers_user_id_fkey(id, full_name)
+            ''').eq('id', response.data[0]['id']).execute()
+            
+            a = full_answer.data[0]
+            return jsonify({
+                'id': a['id'],
+                'content': a['content'],
+                'likes': a['likes'],
+                'createdAt': a['created_at'],
+                'author': a['users']['full_name'] if a.get('users') else 'Anonymous',
+                'author_id': a['user_id']
+            }), 201
+        
+        return jsonify({'error': 'Failed to create answer'}), 400
+        
+    except Exception as e:
+        print(f"Error creating answer: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Delete answer (only owner can delete)
+@app.route('/api/forum/answers/<int:answer_id>', methods=['DELETE'])
+@token_required
+def delete_forum_answer(current_user, answer_id):
+    try:
+        # Check ownership
+        answer = supabase.table('forum_answers').select('user_id').eq('id', answer_id).execute()
+        
+        if not answer.data:
+            return jsonify({'error': 'Answer not found'}), 404
+        
+        if answer.data[0]['user_id'] != current_user:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Delete answer
+        supabase.table('forum_answers').delete().eq('id', answer_id).execute()
+        
+        return jsonify({'message': 'Answer deleted successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ==========================================================
+# FORUM LIKES
+# ==========================================================
+
+# Like/Unlike a question
+@app.route('/api/forum/questions/<int:question_id>/like', methods=['POST'])
+@token_required
+def like_forum_question(current_user, question_id):
+    try:
+        # Check if already liked
+        existing_like = supabase.table('forum_question_likes').select('id').eq('question_id', question_id).eq('user_id', current_user).execute()
+        
+        if existing_like.data:
+            # Unlike - remove like
+            supabase.table('forum_question_likes').delete().eq('question_id', question_id).eq('user_id', current_user).execute()
+            
+            # Decrement likes count
+            question = supabase.table('forum_questions').select('likes').eq('id', question_id).execute()
+            if question.data:
+                new_likes = max(0, question.data[0]['likes'] - 1)
+                supabase.table('forum_questions').update({'likes': new_likes}).eq('id', question_id).execute()
+                return jsonify({'liked': False, 'likes': new_likes}), 200
+        else:
+            # Like - add like
+            supabase.table('forum_question_likes').insert({
+                'question_id': question_id,
+                'user_id': current_user
+            }).execute()
+            
+            # Increment likes count
+            question = supabase.table('forum_questions').select('likes').eq('id', question_id).execute()
+            if question.data:
+                new_likes = question.data[0]['likes'] + 1
+                supabase.table('forum_questions').update({'likes': new_likes}).eq('id', question_id).execute()
+                return jsonify({'liked': True, 'likes': new_likes}), 200
+        
+        return jsonify({'error': 'Question not found'}), 404
+        
+    except Exception as e:
+        print(f"Error liking question: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Like/Unlike an answer
+@app.route('/api/forum/answers/<int:answer_id>/like', methods=['POST'])
+@token_required
+def like_forum_answer(current_user, answer_id):
+    try:
+        # Check if already liked
+        existing_like = supabase.table('forum_answer_likes').select('id').eq('answer_id', answer_id).eq('user_id', current_user).execute()
+        
+        if existing_like.data:
+            # Unlike
+            supabase.table('forum_answer_likes').delete().eq('answer_id', answer_id).eq('user_id', current_user).execute()
+            
+            # Decrement likes count
+            answer = supabase.table('forum_answers').select('likes').eq('id', answer_id).execute()
+            if answer.data:
+                new_likes = max(0, answer.data[0]['likes'] - 1)
+                supabase.table('forum_answers').update({'likes': new_likes}).eq('id', answer_id).execute()
+                return jsonify({'liked': False, 'likes': new_likes}), 200
+        else:
+            # Like
+            supabase.table('forum_answer_likes').insert({
+                'answer_id': answer_id,
+                'user_id': current_user
+            }).execute()
+            
+            # Increment likes count
+            answer = supabase.table('forum_answers').select('likes').eq('id', answer_id).execute()
+            if answer.data:
+                new_likes = answer.data[0]['likes'] + 1
+                supabase.table('forum_answers').update({'likes': new_likes}).eq('id', answer_id).execute()
+                return jsonify({'liked': True, 'likes': new_likes}), 200
+        
+        return jsonify({'error': 'Answer not found'}), 404
+        
+    except Exception as e:
+        print(f"Error liking answer: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 #forum

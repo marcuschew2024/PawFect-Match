@@ -313,15 +313,19 @@ export default {
 }
 
 .btn-primary {
-  background: var(--primary-pink);
-  border-color: var(--primary-pink);
-  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
   font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
-  background: var(--primary-pink-dark);
-  border-color: var(--primary-pink-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
 }
 
 .image-preview {
