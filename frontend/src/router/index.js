@@ -31,6 +31,13 @@ const routes = [
     component: AboutPage
     // No meta - public access
   },
+   {
+    path: '/community', 
+    name: 'Community',
+    component: CommunityPage
+    // No meta - public access
+
+  },
   {
     path: '/community', 
     name: 'Community',
