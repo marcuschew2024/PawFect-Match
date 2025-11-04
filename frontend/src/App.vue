@@ -24,8 +24,13 @@
             <li class="nav-item" v-if="isAuthenticated">
               <router-link to="/add-pet" class="nav-link">List a Pet</router-link>
             </li>
-            
-            
+            <li class="nav-item">
+              <router-link to="/community" class="nav-link">
+                Community
+              </router-link>
+            </li>
+
+
             <!-- Authentication Section -->
             <li class="nav-item dropdown" v-if="!isAuthenticated">
               <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -36,20 +41,23 @@
                 <li><router-link to="/signup" class="dropdown-item">Sign Up</router-link></li>
               </ul>
             </li>
-            
+
             <li class="nav-item dropdown" v-else>
               <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                 <i class="bi bi-person-circle me-1"></i>{{ user?.full_name || 'User' }}
               </a>
               <ul class="dropdown-menu">
                 <li><router-link to="/profile" class="dropdown-item">
-                  <i class="bi bi-person me-2"></i>My Profile
-                </router-link></li>
+                    <i class="bi bi-person me-2"></i>My Profile
+                  </router-link></li>
                 <li><router-link to="/favorites" class="dropdown-item">
-                  <i class="bi bi-heart me-2"></i>My Favorites
-                </router-link></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#" @click="handleLogout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                    <i class="bi bi-heart me-2"></i>My Favorites
+                  </router-link></li>
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+                <li><a class="dropdown-item" href="#" @click="handleLogout"><i
+                      class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
               </ul>
             </li>
           </ul>
@@ -59,15 +67,16 @@
 
     <!-- Main Content -->
     <main>
-      <router-view @auth-change="checkAuth"/>
+      <router-view @auth-change="checkAuth" />
     </main>
 
+    <!-- Footer -->
     <!-- Footer -->
     <footer>
       <div class="container">
         <div class="row">
           <!-- Explore Column -->
-          <div class="col-md-4 mb-4">
+          <div class="col-md-4 mb-4 text-center">
             <h6 class="footer-heading">Explore</h6>
             <ul class="footer-links">
               <li><router-link to="/">Home</router-link></li>
@@ -78,7 +87,7 @@
           </div>
 
           <!-- Contact Column -->
-          <div class="col-md-4 mb-4">
+          <div class="col-md-4 mb-4 text-center">
             <h6 class="footer-heading">Contact</h6>
             <ul class="footer-links">
               <li><a href="#">Contact Us</a></li>
@@ -88,7 +97,7 @@
           </div>
 
           <!-- Follow Us Column -->
-          <div class="col-md-4 mb-4">
+          <div class="col-md-4 mb-4 text-center">
             <h6 class="footer-heading">Follow Us</h6>
             <div class="social-icons">
               <a href="#"><i class="bi bi-facebook"></i></a>
@@ -96,8 +105,9 @@
               <a href="#"><i class="bi bi-tiktok"></i></a>
             </div>
             <div class="brand-section mt-4">
-              <div class="d-flex align-items-center">
-                <img src="https://cdn-icons-png.flaticon.com/512/616/616430.png" alt="PawFect Match Logo" height="40" class="me-2">
+              <div class="d-flex align-items-center justify-content-center">
+                <img src="https://cdn-icons-png.flaticon.com/512/616/616430.png" alt="PawFect Match Logo" height="40"
+                  class="me-2">
                 <h5 class="brand-name">PawFect Match</h5>
               </div>
             </div>
@@ -124,7 +134,7 @@ export default {
     checkAuth() {
       const token = localStorage.getItem('authToken');
       const userData = localStorage.getItem('user');
-      
+
       this.isAuthenticated = !!token;
       if (userData) {
         try {
@@ -136,7 +146,7 @@ export default {
       } else {
         this.user = null;
       }
-      
+
       console.log('Auth check:', { isAuthenticated: this.isAuthenticated, user: this.user });
     },
     handleLogout() {

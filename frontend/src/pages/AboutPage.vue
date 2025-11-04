@@ -18,7 +18,8 @@
       <div class="container">
         <div class="row align-items-center">
           <div class="col-lg-6 mb-4 mb-lg-0">
-            <img src="https://images.unsplash.com/photo-1623387641168-d9803ddd3f35?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070"
+            <img
+              src="https://images.unsplash.com/photo-1623387641168-d9803ddd3f35?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070"
               alt="A variety of happy pets including a dog, cat, and rabbit" class="img-fluid rounded shadow-heavy">
           </div>
           <div class="col-lg-6">
@@ -83,7 +84,6 @@ export default {
 </script>
 
 <style scoped>
-
 /* Hero Section */
 .hero-section {
   padding: 4rem 0;
@@ -164,13 +164,32 @@ export default {
 
 /* Meet Our Pets Button */
 .btn-primary {
-  background-color: var(--primary-pink);
-  border-color: var(--primary-pink);
-  color: var(--text-dark);
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+
 }
 
+/* .btn-primary {
+  background-color: var(--primary-pink); 
+  border-color: var(--primary-pink);
+  color: var(--text-dark);
+} */
+
 .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
+}
+
+/* .btn-primary:hover {
   background-color: var(--primary-pink-dark);
   border-color: var(--primary-pink-dark);
-}
+} */
 </style>
+
+

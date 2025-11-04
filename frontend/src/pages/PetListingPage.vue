@@ -3,17 +3,14 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="mb-0">Find Your Pawfect Match</h1>
       <div v-if="isAuthenticated" class="d-flex gap-2">
-        <button class="btn btn-warning" @click="$router.push('/quiz')">
-          <i class="bi bi-clipboard-check me-2"></i>
-          {{ hasCompletedQuiz ? 'Update Quiz' : 'Take Lifestyle Quiz' }}
-        </button>
+        <!-- Only show favorites button if quiz is completed -->
         <router-link v-if="hasCompletedQuiz" to="/favorites" class="btn btn-outline-primary">
           <i class="bi bi-heart me-2"></i>View Favorites
         </router-link>
       </div>
     </div>
 
-    <!-- Quiz Prompt for Authenticated Users -->
+    <!-- Quiz Prompt for Authenticated Users - FIXED -->
     <div v-if="isAuthenticated && !hasCompletedQuiz && !loading" class="alert alert-info">
       <div class="d-flex justify-content-between align-items-center">
         <div>
@@ -71,7 +68,7 @@
         <!-- Action Buttons -->
         <div class="col-lg-3 col-md-6">
           <div class="d-flex gap-2">
-            <button class="btn btn-primary flex-fill" @click="applyFilters">
+            <button class="btn btn-pink flex-fill" @click="applyFilters">
               <i class="bi bi-funnel me-2"></i>APPLY FILTERS
             </button>
             <button class="btn btn-outline-secondary" @click="resetFilters">
@@ -126,9 +123,14 @@
               <i class="bi" :class="pet.is_favorite ? 'bi-heart-fill' : 'bi-heart'"></i>
             </button>
 
-            <div v-if="pet.placeholderImage && pet.imageLoaded" class="api-badge">
-              Placeholder Image
+            <!-- Image Source Badge -->
+            <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
+              AI Generated Image
             </div>
+            <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
+              Real Image
+            </div>
+
             <div v-if="!pet.imageLoaded" class="image-loading">
               <i class="bi bi-arrow-repeat spinner"></i>
             </div>
@@ -163,17 +165,20 @@
             <p class="card-text personality">"{{ pet.personality }}"</p>
           </div>
 
-          <!-- Replace current adoption button section in PetListingPage.vue -->
           <div class="card-footer bg-transparent">
             <div class="d-grid gap-2">
               <!-- View More Button -->
               <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
-                <i class="bi bi-eye me-1"></i>View More
+                <i class="bi me-1"></i>View More
               </button>
 
               <!-- Adoption Button -->
               <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
                 <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
+              </button>
+
+              <button v-else-if="!isAuthenticated" class="btn btn-outline-success" @click="$router.push('/login')">
+                <i class="bi bi-person me-1"></i>Login to Adopt
               </button>
 
               <button v-else-if="pet.is_adopted" class="btn btn-secondary" disabled>
@@ -243,16 +248,17 @@ export default {
       this.isAuthenticated = !!token;
     },
 
+
     async initializePage() {
-      //load the breeds first 
+      this.checkAuth();
       await this.loadAllBreeds();
 
-      //Check if user has completed quiz
+      // Check if user has completed quiz
       if (this.isAuthenticated) {
         await this.checkQuizCompletion();
       }
 
-      //after breed is loaded and quiz is checked, get the pets
+      // After breed is loaded and quiz is checked, get the pets
       await this.fetchPets();
     },
 
@@ -268,6 +274,8 @@ export default {
         if (response.ok) {
           this.userProfile = await response.json();
           this.hasCompletedQuiz = true;
+          console.log("Has completed quiz:", this.hasCompletedQuiz);
+          console.log(this.userProfile);
         }
       } catch (error) {
         console.log('No quiz results found');
@@ -295,6 +303,7 @@ export default {
           headers['Authorization'] = `Bearer ${token}`;
         }
 
+        console.log('🔄 Fetching pets from:', url);
         const response = await fetch(url, { headers });
 
         if (!response.ok) {
@@ -302,16 +311,190 @@ export default {
         }
 
         let data = await response.json();
+        console.log('📦 Raw pets data:', data);
+
+        // Log image information for each pet
+        data.forEach(pet => {
+          console.log(`🐕 ${pet.name}:`, {
+            hasImage: !!(pet.image && pet.image.trim()),
+            image: pet.image,
+            type: pet.type,
+            breed: pet.breed
+          });
+        });
 
         // Process pets data
         this.pets = await this.processPetsWithImages(data);
         this.filteredPets = [...this.pets];
+
+        console.log('✅ Processed pets:', this.pets);
 
       } catch (error) {
         console.error('Error fetching pets:', error);
         this.error = error.message;
       } finally {
         this.loading = false;
+      }
+    },
+
+    async processPetsWithImages(pets) {
+      const processedPets = pets.map(pet => {
+        // Check if pet has a valid image in database
+        const hasValidDatabaseImage = pet.image && pet.image.trim() !== '' && !pet.image.includes('placeholder');
+
+        if (hasValidDatabaseImage) {
+          console.log(`✓ Using database image for ${pet.name}:`, pet.image);
+          return {
+            ...pet,
+            displayImage: pet.image,
+            imageLoaded: false,
+            placeholderImage: false,
+            imageSource: 'database'
+          };
+        } else {
+          console.log(`⚠ No valid database image for ${pet.name}, using placeholder`);
+          return {
+            ...pet,
+            displayImage: this.getColoredPlaceholder(pet),
+            imageLoaded: false,
+            placeholderImage: true,
+            imageSource: 'placeholder'
+          };
+        }
+      });
+
+      // Try to fetch better images for pets with placeholders
+      this.fetchApiImagesForPets(processedPets);
+      return processedPets;
+    },
+
+    async fetchApiImagesForPets(pets) {
+      // Only fetch API images for pets that have placeholders
+      const petsNeedingImages = pets.filter(pet => pet.placeholderImage && pet.imageSource === 'placeholder');
+
+      console.log(`🖼 Fetching API images for ${petsNeedingImages.length} pets`);
+
+      const batchSize = 3;
+
+      for (let i = 0; i < petsNeedingImages.length; i += batchSize) {
+        const batch = petsNeedingImages.slice(i, i + batchSize);
+        const promises = batch.map(async (pet) => {
+          try {
+            const apiImage = await this.fetchPetImage(pet);
+            if (apiImage) {
+              console.log(`✅ Found API image for ${pet.name}:`, apiImage);
+              pet.displayImage = apiImage;
+              pet.image = apiImage; // Also update the main image field
+              pet.placeholderImage = false;
+              pet.imageSource = 'api';
+
+              // Update reactivity
+              this.pets = [...this.pets];
+              this.filteredPets = [...this.filteredPets];
+            } else {
+              console.log(`❌ No API image found for ${pet.name}`);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch API image for ${pet.name}:`, error);
+          }
+        });
+
+        await Promise.allSettled(promises);
+
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < petsNeedingImages.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    },
+
+    async fetchPetImage(pet) {
+      const cacheKey = `${pet.type}-${pet.breed}`;
+      if (this.imageCache.has(cacheKey)) {
+        return this.imageCache.get(cacheKey);
+      }
+
+      try {
+        const breedId = this.findBreedId(pet.breed, pet.type);
+        const apiUrl = pet.type === "dog"
+          ? `${API_BASE_URL}/external/dog-images`
+          : `${API_BASE_URL}/external/cat-images`;
+
+        const params = new URLSearchParams({ limit: "1" });
+        if (breedId) params.append("breed_id", breedId);
+
+        const token = localStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${apiUrl}?${params}`, { headers });
+
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+        const data = await response.json();
+        if (data && data.length > 0 && data[0].url) {
+          const imageUrl = data[0].url;
+          this.imageCache.set(cacheKey, imageUrl);
+          return imageUrl;
+        }
+        return "";
+      } catch (error) {
+        console.error(`Error fetching image for ${pet.name}:`, error);
+        return "";
+      }
+    },
+
+    onImageLoad(pet) {
+      pet.imageLoaded = true;
+      console.log(`✅ Image loaded successfully for ${pet.name} from ${pet.imageSource}`);
+    },
+
+    onImageError(pet) {
+      console.log(`🖼 Image load error for ${pet.name}:`, pet.displayImage);
+
+      // If database image fails, try API image
+      if (pet.imageSource === 'database') {
+        console.log(`🔄 Database image failed, trying API for ${pet.name}`);
+        pet.placeholderImage = true;
+        pet.imageSource = 'placeholder';
+        this.fetchApiImageForSinglePet(pet);
+      }
+      // If API image fails, use colored placeholder
+      else if (pet.imageSource === 'api') {
+        console.log(`🔄 API image failed, using placeholder for ${pet.name}`);
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
+      // If already using placeholder, just mark as loaded
+      else {
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
+
+      pet.imageLoaded = true;
+    },
+
+    // Helper method to fetch API image for single pet
+    async fetchApiImageForSinglePet(pet) {
+      try {
+        const apiImage = await this.fetchPetImage(pet);
+        if (apiImage) {
+          pet.displayImage = apiImage;
+          pet.image = apiImage;
+          pet.placeholderImage = false;
+          pet.imageSource = 'api';
+
+          // Update reactivity
+          this.pets = [...this.pets];
+          this.filteredPets = [...this.filteredPets];
+        } else {
+          pet.displayImage = this.getColoredPlaceholder(pet);
+          pet.placeholderImage = false;
+        }
+      } catch (error) {
+        console.error(`Error fetching API image for ${pet.name}:`, error);
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
       }
     },
 
@@ -392,107 +575,18 @@ export default {
       this.filteredPets = [...this.pets];
     },
 
-    async processPetsWithImages(pets) {
-      const processedPets = pets.map(pet => {
-        if (pet.image && pet.image.trim() !== '') {
-          return {
-            ...pet,
-            displayImage: pet.image,
-            imageLoaded: false,
-            placeholderImage: false
-          };
-        } else {
-          return {
-            ...pet,
-            displayImage: this.getColoredPlaceholder(pet),
-            imageLoaded: false,
-            placeholderImage: true
-          };
-        }
-      });
-
-      this.fetchApiImagesForPets(processedPets);
-      return processedPets;
-    },
-
-    async fetchApiImagesForPets(pets) {
-      const petsNeedingImages = pets.filter(pet => pet.placeholderImage);
-      const batchSize = 3;
-
-      for (let i = 0; i < petsNeedingImages.length; i += batchSize) {
-        const batch = petsNeedingImages.slice(i, i + batchSize);
-        const promises = batch.map(async (pet) => {
-          try {
-            const apiImage = await this.fetchPetImage(pet);
-            if (apiImage) {
-              pet.displayImage = apiImage;
-              pet.image = apiImage;
-              this.pets = [...this.pets];
-              this.filteredPets = [...this.filteredPets];
-            }
-          } catch (error) {
-            console.error(`Failed to fetch API image for ${pet.name}:`, error);
-          }
-        });
-
-        await Promise.allSettled(promises);
-        if (i + batchSize < petsNeedingImages.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
-    },
-
-    async fetchPetImage(pet) {
-      const cacheKey = `${pet.type}-${pet.breed}`;
-      if (this.imageCache.has(cacheKey)) {
-        return this.imageCache.get(cacheKey);
-      }
-
-      try {
-        const breedId = this.findBreedId(pet.breed, pet.type);
-        const apiUrl = pet.type === "dog"
-          ? `${API_BASE_URL}/external/dog-images`
-          : `${API_BASE_URL}/external/cat-images`;
-
-        const params = new URLSearchParams({ limit: "1" });
-        if (breedId) params.append("breed_id", breedId);
-
-        const token = localStorage.getItem('authToken');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const response = await fetch(`${apiUrl}?${params}`, { headers });
-
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-        const data = await response.json();
-        if (data && data.length > 0 && data[0].url) {
-          const imageUrl = data[0].url;
-          this.imageCache.set(cacheKey, imageUrl);
-          return imageUrl;
-        }
-        return "";
-      } catch (error) {
-        console.error(`Error fetching image for ${pet.name}:`, error);
-        return "";
-      }
-    },
-
     findBreedId(breedName, type) {
-      // if type is dog, use first if not use second 
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
-      
-      // If no breeds loaded
+
       if (!breeds.length) {
         console.log(`No breeds loaded for ${type}`);
         return null;
       }
 
-      //matching is case-insensitive 
       const normalizedBreedName = breedName.toLowerCase().trim();
       console.log(`Searching for breed: "${breedName}" (${type})`);
 
-      // check if there is a breed whose name matches exactly 
+      // Exact match
       let breed = breeds.find(b =>
         b.name.toLowerCase().trim() === normalizedBreedName
       );
@@ -502,11 +596,9 @@ export default {
         return breed.id;
       }
 
-      //if no exact match, check if API breed name contains the speciifed breed
+      // API breed name contains specified breed
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
-
-        //.length avoid false matches with short words
         return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 4;
       });
 
@@ -515,7 +607,7 @@ export default {
         return breed.id;
       }
 
-      //checks if the specified breed contains the API name (opposite above)
+      // Specified breed contains API name
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
         return normalizedBreedName.includes(apiName) && apiName.length >= 4;
@@ -526,7 +618,7 @@ export default {
         return breed.id;
       }
 
-      // if no match yet, then compare word by word 
+      // Word-by-word match
       const breedWords = normalizedBreedName.split(/\s+/);
       breed = breeds.find(b => {
         const apiWords = b.name.toLowerCase().trim().split(/\s+/);
@@ -540,22 +632,10 @@ export default {
         return breed.id;
       }
 
-      //if no match, show first 5 available breeds then
       console.log(` NO MATCH for "${breedName}"`);
       console.log(`   Try one of these: ${breeds.slice(0, 5).map(b => b.name).join(', ')}...`);
       return null;
     },
-
-    // findBreedId(breedName, type) {
-    //   const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
-    //   if (!breeds.length) return null;
-    //   const breed = breeds.find(b => 
-    //     b.name.toLowerCase().includes(breedName.toLowerCase()) ||
-    //     breedName.toLowerCase().includes(b.name.toLowerCase())
-    //   );
-    //   return breed ? breed.id : null;
-    // },
-  
 
     async loadAllBreeds() {
       try {
@@ -568,7 +648,6 @@ export default {
           fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
         ]);
 
-        // check the individual responses
         if (dogResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
           console.log(`✓ Loaded ${this.allDogBreeds.length} dog breeds`);
@@ -588,26 +667,6 @@ export default {
       }
     },
 
-    // async loadAllBreeds() {
-    //   try {
-    //     const token = localStorage.getItem('authToken');
-    //     const headers = { 'Content-Type': 'application/json' };
-    //     if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    //     const [dogResponse, catResponse] = await Promise.all([
-    //       fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
-    //       fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
-    //     ]);
-
-    //     if (dogResponse.ok && catResponse.ok) {
-    //       this.allDogBreeds = await dogResponse.json();
-    //       this.allCatBreeds = await catResponse.json();
-    //     }
-    //   } catch (error) {
-    //     console.error("Error fetching breed lists:", error);
-    //   }
-    // },
-
     getColoredPlaceholder(pet) {
       const colors = {
         dog: ['#ffb6c1', '#ffd1dc', '#ffecb3', '#c8e6c9'],
@@ -620,26 +679,12 @@ export default {
       return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='250' viewBox='0 0 300 250'%3E%3Crect fill='${color}' width='300' height='250'/%3E%3Ctext fill='%23666' font-size='24' font-family='system-ui' x='150' y='125' text-anchor='middle' dominant-baseline='middle'%3E${emoji}%3C/text%3E%3Ctext fill='%23333' font-size='16' font-family='system-ui' x='150' y='160' text-anchor='middle'%3E${pet.name}%3C/text%3E%3C/svg%3E`;
     },
 
-    onImageLoad(pet) {
-      pet.imageLoaded = true;
-    },
-
-    onImageError(pet) {
-      if (pet.displayImage !== this.getColoredPlaceholder(pet)) {
-        pet.displayImage = this.getColoredPlaceholder(pet);
-        pet.placeholderImage = false;
-      }
-      pet.imageLoaded = true;
-    },
-
-    // NEW METHODS FOR ADOPTION FLOW
     showPetDetails(pet) {
       this.selectedPet = pet;
       this.$refs.petDetailModal.show();
     },
 
     startAdoption(pet) {
-      // Directly navigate to adoption form for this pet
       this.$router.push(`/adopt/${pet.id}`);
     }
   }
@@ -663,7 +708,7 @@ export default {
 
 .favorite-btn {
   position: absolute;
-  top: 12px;
+  bottom: 12px;
   right: 12px;
   background: rgba(255, 255, 255, 0.95);
   border: none;
@@ -702,9 +747,14 @@ export default {
   font-size: 0.7rem;
   font-weight: 500;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: 12px;
   border: 1px solid var(--border-light);
   z-index: 3;
+}
+
+.database-badge {
+  background-color: rgba(76, 175, 80, 0.95) !important;
+  color: white !important;
 }
 
 .image-loading {
@@ -776,25 +826,36 @@ export default {
   animation-delay: 0.2s;
 }
 
-.view-more-btn {
-  background: var(--primary-pink);
-  border: 2px solid var(--primary-pink);
-  color: var(--text-dark);
+.btn-pink {
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
+  border: none !important;
+  padding: 12px 25px;
   font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
   transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 0.85rem;
-  width: 100%;
+}
+
+.btn-pink:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
+}
+
+.view-more-btn {
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .view-more-btn:hover {
-  background: var(--primary-pink-dark);
-  border-color: var(--primary-pink-dark);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-heavy);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
 }
 
 .btn-success {
@@ -810,12 +871,10 @@ export default {
 
 .btn-success:hover {
   background: linear-gradient(135deg, #1e8b81, #3cb7b0);
-  /* darker gradient */
   border-color: #1e8b81;
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(78, 205, 196, 0.4);
   color: white;
-  /* keep text visible */
 }
 
 .personality {

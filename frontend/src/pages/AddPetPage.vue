@@ -9,7 +9,7 @@
           </div>
 
           <div class="adoption-card">
-            <form @submit.prevent="submitPet" class="adoption-form">
+            <form @submit.prevent="submitPet" class="adoption-form" enctype="multipart/form-data">
               <!-- Basic Information -->
               <div class="form-section mb-4">
                 <h4 class="section-title">Basic Information</h4>
@@ -63,6 +63,78 @@
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Image Upload -->
+              <div class="form-section mb-4">
+                <h4 class="section-title">Pet Images</h4>
+                
+                <!-- File Upload -->
+                <div class="mb-3">
+                  <label for="petImages" class="form-label">Upload Images</label>
+                  <input 
+                    type="file" 
+                    class="form-control" 
+                    id="petImages" 
+                    multiple 
+                    accept="image/*"
+                    @change="handleFileUpload"
+                    ref="fileInput"
+                  >
+                  <div class="form-text">You can select multiple images. Maximum 5 images, 5MB each.</div>
+                </div>
+
+                <!-- URL Upload -->
+                <div class="mb-3">
+                  <label for="imageUrls" class="form-label">Or Add Image URLs</label>
+                  <div class="input-group mb-2">
+                    <input 
+                      type="url" 
+                      class="form-control" 
+                      v-model="newImageUrl" 
+                      placeholder="https://example.com/pet-image.jpg"
+                    >
+                    <button 
+                      type="button" 
+                      class="btn btn-outline-secondary" 
+                      @click="addImageUrl"
+                      :disabled="!newImageUrl"
+                    >
+                      Add URL
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Image Previews -->
+                <div v-if="uploadedImages.length > 0" class="image-previews mt-4">
+                  <h6>Selected Images:</h6>
+                  <div class="row">
+                    <div 
+                      v-for="(image, index) in uploadedImages" 
+                      :key="index" 
+                      class="col-md-4 mb-3"
+                    >
+                      <div class="image-preview-card position-relative">
+                        <img 
+                          :src="image.preview || image.url" 
+                          alt="Preview" 
+                          class="img-thumbnail"
+                          style="height: 150px; width: 100%; object-fit: cover;"
+                        >
+                        <button 
+                          type="button" 
+                          class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
+                          @click="removeImage(index)"
+                        >
+                          ×
+                        </button>
+                        <div class="image-info small text-muted p-1">
+                          {{ image.file ? image.file.name : 'URL' }}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -132,23 +204,6 @@
                 </div>
               </div>
 
-              <!-- Image Upload -->
-              <div class="form-section mb-4">
-                <h4 class="section-title">Pet Image</h4>
-                
-                <div class="mb-3">
-                  <label for="petImage" class="form-label">Image URL</label>
-                  <input type="url" class="form-control" id="petImage" 
-                         v-model="form.image" 
-                         placeholder="https://example.com/pet-image.jpg">
-                  <div class="form-text">Provide a direct URL to the pet's photo</div>
-                </div>
-
-                <div v-if="form.image" class="image-preview mt-3">
-                  <img :src="form.image" alt="Preview" class="img-thumbnail" style="max-height: 200px;">
-                </div>
-              </div>
-
               <!-- Error Message -->
               <div v-if="error" class="alert alert-danger">
                 {{ error }}
@@ -162,9 +217,9 @@
 
               <!-- Submit Button -->
               <div class="d-grid">
-                <button type="submit" class="btn btn-primary btn-lg" :disabled="loading">
+                <button type="submit" class="btn btn-primary btn-lg" :disabled="loading || uploadedImages.length === 0">
                   <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  {{ loading ? 'Adding Pet...' : 'Add Pet for Adoption' }}
+                  {{ loading ? 'Adding Pet...' : `Add Pet for Adoption (${uploadedImages.length} images)` }}
                 </button>
               </div>
             </form>
@@ -195,62 +250,131 @@ export default {
         vaccination_status: 'Up to date',
         adoption_fee: 0,
         health_info: '',
-        location: 'Singapore',
-        image: ''
+        location: 'Singapore'
       },
+      uploadedImages: [],
+      newImageUrl: '',
       loading: false,
       error: null,
       success: null
     }
   },
   methods: {
+    handleFileUpload(event) {
+      const files = event.target.files;
+      if (files.length > 5) {
+        this.error = 'Maximum 5 images allowed';
+        return;
+      }
+
+      for (let file of files) {
+        if (file.size > 5 * 1024 * 1024) {
+          this.error = `File ${file.name} is too large. Maximum size is 5MB.`;
+          continue;
+        }
+
+        if (!file.type.startsWith('image/')) {
+          this.error = `File ${file.name} is not an image.`;
+          continue;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.uploadedImages.push({
+            file: file,
+            preview: e.target.result,
+            type: 'file'
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // Reset file input
+      this.$refs.fileInput.value = '';
+    },
+
+    addImageUrl() {
+      if (this.newImageUrl && this.uploadedImages.length < 5) {
+        this.uploadedImages.push({
+          url: this.newImageUrl,
+          type: 'url'
+        });
+        this.newImageUrl = '';
+      } else if (this.uploadedImages.length >= 5) {
+        this.error = 'Maximum 5 images allowed';
+      }
+    },
+
+    removeImage(index) {
+      this.uploadedImages.splice(index, 1);
+    },
+
     async submitPet() {
-  this.loading = true;
-  this.error = null;
-  this.success = null;
-  
-  try {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      this.$router.push('/login');
-      return;
-    }
-    
-    console.log('Submitting pet data:', this.form); // Debug log
-    
-    const response = await fetch(`${API_BASE_URL}/pets`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(this.form)
-    });
-    
-    console.log('Response status:', response.status); // Debug log
-    
-    if (response.ok) {
-      const newPet = await response.json();
-      console.log('Successfully created pet:', newPet); // Debug log
-      this.success = `Successfully added ${newPet.name} for adoption!`;
-      this.resetForm();
+      if (this.uploadedImages.length === 0) {
+        this.error = 'Please add at least one image of the pet';
+        return;
+      }
+
+      this.loading = true;
+      this.error = null;
+      this.success = null;
       
-      // Optional: Redirect to pet listing after success
-      setTimeout(() => {
-        this.$router.push('/pets');
-      }, 2000);
-    } else {
-      const error = await response.json();
-      console.error('Server error:', error); // Debug log
-      this.error = error.error || `Failed to add pet for adoption (Status: ${response.status})`;
-    }
-  } catch (error) {
-    console.error('Error adding pet:', error);
-    this.error = 'Network error. Please try again.';
-  } finally {
-    this.loading = false;
-  }
-},
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          this.$router.push('/login');
+          return;
+        }
+
+        // Create FormData for file upload
+        const formData = new FormData();
+        
+        // Add pet data
+        formData.append('petData', JSON.stringify(this.form));
+        
+        // Add images
+        this.uploadedImages.forEach((image, index) => {
+          if (image.type === 'file') {
+            formData.append('images', image.file);
+          } else {
+            formData.append('imageUrls', image.url);
+          }
+        });
+
+        console.log('Submitting pet data with images:', this.uploadedImages.length);
+
+        const response = await fetch(`${API_BASE_URL}/pets`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+            // Don't set Content-Type - let browser set it with boundary
+          },
+          body: formData
+        });
+
+        console.log('Response status:', response.status);
+
+        if (response.ok) {
+          const newPet = await response.json();
+          console.log('Successfully created pet:', newPet);
+          this.success = `Successfully added ${newPet.name} for adoption with ${this.uploadedImages.length} images!`;
+          this.resetForm();
+          
+          setTimeout(() => {
+            this.$router.push('/pets');
+          }, 2000);
+        } else {
+          const error = await response.json();
+          console.error('Server error:', error);
+          this.error = error.error || `Failed to add pet for adoption (Status: ${response.status})`;
+        }
+      } catch (error) {
+        console.error('Error adding pet:', error);
+        this.error = 'Network error. Please try again.';
+      } finally {
+        this.loading = false;
+      }
+    },
     
     resetForm() {
       this.form = {
@@ -266,9 +390,10 @@ export default {
         vaccination_status: 'Up to date',
         adoption_fee: 0,
         health_info: '',
-        location: 'Singapore',
-        image: ''
+        location: 'Singapore'
       };
+      this.uploadedImages = [];
+      this.newImageUrl = '';
     }
   }
 }
@@ -313,23 +438,32 @@ export default {
 }
 
 .btn-primary {
-  background: var(--primary-pink);
-  border-color: var(--primary-pink);
-  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
   font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
-  background: var(--primary-pink-dark);
-  border-color: var(--primary-pink-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
 }
 
-.image-preview {
-  text-align: center;
-}
-
-.image-preview img {
+.image-preview-card {
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-  border: 2px solid var(--border-light);
+  overflow: hidden;
+}
+
+.image-preview-card img {
+  transition: transform 0.3s ease;
+}
+
+.image-preview-card:hover img {
+  transform: scale(1.05);
 }
 </style>
