@@ -41,44 +41,42 @@
       </div>
     </div>
 
-    <!-- Favorites Grid -->
+    <!-- Favorites Grid - Same as PetListing -->
     <div v-else class="row mt-4">
       <div class="col-md-6 col-lg-4 mb-4" v-for="pet in favoritePets" :key="pet.id">
         <div class="card h-100 pet-card">
           <div class="position-relative">
-            <img 
-              :src="pet.displayImage" 
-              :alt="pet.name"
-              class="card-img-top"
-              :class="{ 'image-loaded': pet.imageLoaded }"
-              @load="onImageLoad(pet)"
-              @error="onImageError(pet)"
-              loading="lazy"
-            >
-            
-            <!-- Compatibility Score Badge -->
-            <div v-if="pet.compatibility_score" 
-                 class="compatibility-badge">
+            <img :src="pet.displayImage" :alt="pet.name" class="card-img-top"
+              :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
+              loading="lazy">
+
+            <!-- Compatibility Badge - Same as PetListing -->
+            <div v-if="pet.compatibility_score" class="compatibility-badge">
               {{ pet.compatibility_score }}% Match
             </div>
-            
-            <!-- Favorite Button -->
+
+            <!-- Favorite Button - Same as PetListing -->
             <button class="favorite-btn favorited" @click="removeFavorite(pet)">
               <i class="bi bi-heart-fill"></i>
             </button>
-            
-            <div v-if="pet.placeholderImage && pet.imageLoaded" class="api-badge">
-              Placeholder Image
+
+            <!-- Image Source Badge - Same as PetListing -->
+            <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
+              AI Generated Image
             </div>
+            <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
+              Real Image
+            </div>
+
             <div v-if="!pet.imageLoaded" class="image-loading">
               <i class="bi bi-arrow-repeat spinner"></i>
             </div>
           </div>
-          
+
           <div class="card-body d-flex flex-column">
             <h5 class="card-title">{{ pet.name }}</h5>
-            
-            <!-- Compatibility Meter -->
+
+            <!-- Compatibility Meter - Same as PetListing -->
             <div v-if="pet.compatibility_score" class="compatibility-meter mb-3">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <small class="text-muted">Compatibility</small>
@@ -87,34 +85,30 @@
                 </small>
               </div>
               <div class="progress" style="height: 6px;">
-                <div class="progress-bar bg-primary" 
-                     :style="{ width: pet.compatibility_score + '%' }"></div>
+                <div class="progress-bar bg-primary" :style="{ width: pet.compatibility_score + '%' }"></div>
               </div>
             </div>
-            
+
+            <!-- Pet Details - Same as PetListing -->
             <p class="card-text mb-2 flex-grow-1">
               <strong>Age:</strong> {{ pet.age }}<br>
               <strong>Breed:</strong> {{ pet.breed }}<br>
               <strong>Size:</strong> {{ pet.size }}<br>
               <strong>Gender:</strong> {{ pet.gender }}<br>
-              <strong>Activity:</strong> 
+              <strong>Activity:</strong>
               <span class="badge" :class="getActivityClass(pet.activity_level)">
                 {{ pet.activity_level }}
               </span>
             </p>
             <p class="card-text personality">"{{ pet.personality }}"</p>
           </div>
-          
+
+          <!-- Card Footer - Same as PetListing but with Remove Favorite option -->
           <div class="card-footer bg-transparent">
             <div class="d-grid gap-2">
-              <!-- View More Button -->
+              <!-- View More Button - Same as PetListing -->
               <button class="btn view-more-btn" @click="viewPetDetails(pet)">
-                <i class="bi bi-eye me-1"></i>View More
-              </button>
-              
-              <!-- Remove Favorite Button -->
-              <button class="btn btn-outline-danger btn-sm" @click="removeFavorite(pet)">
-                <i class="bi bi-heart-fill me-1"></i>Remove Favorite
+                <i class="bi me-1"></i>View More
               </button>
             </div>
           </div>
@@ -224,17 +218,42 @@ export default {
         }
 
         // Get full pet details with scores
-        const petsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        let allPets = [];
+        try {
+          const petsResponse = await fetch(`${API_BASE_URL}/pets/with-scores`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (petsResponse.ok) {
+            allPets = await petsResponse.json();
+          } else {
+            // Fallback to regular pets endpoint if with-scores fails
+            const regularPetsResponse = await fetch(`${API_BASE_URL}/pets`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            if (regularPetsResponse.ok) {
+              allPets = await regularPetsResponse.json();
+            } else {
+              throw new Error('Failed to load pet details');
+            }
           }
-        });
-
-        if (!petsResponse.ok) {
-          throw new Error('Failed to load pet details');
+        } catch (error) {
+          console.log('Falling back to regular pets endpoint');
+          const regularPetsResponse = await fetch(`${API_BASE_URL}/pets`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (regularPetsResponse.ok) {
+            allPets = await regularPetsResponse.json();
+          } else {
+            throw new Error('Failed to load pet details');
+          }
         }
-
-        const allPets = await petsResponse.json();
         
         // Filter to only include favorited pets
         const favoritePetsData = allPets.filter(pet => favoriteIds.includes(pet.id));
@@ -252,31 +271,40 @@ export default {
 
     async processPetsWithImages(pets) {
       const processedPets = pets.map(pet => {
-        if (pet.image && pet.image.trim() !== '') {
-          return {
-            ...pet,
-            displayImage: pet.image,
-            imageLoaded: false,
-            placeholderImage: false
-          };
+        let displayImage = null;
+        let imageSource = 'placeholder';
+        
+        // Use the exact same logic as PetListing page
+        if (pet.main_image && pet.main_image.trim() !== '') {
+          displayImage = pet.main_image;
+          imageSource = 'database';
+        } else if (pet.image && pet.image.trim() !== '') {
+          displayImage = pet.image;
+          imageSource = 'database';
         } else {
-          return {
-            ...pet,
-            displayImage: this.getColoredPlaceholder(pet),
-            imageLoaded: false,
-            placeholderImage: true
-          };
+          displayImage = this.getColoredPlaceholder(pet);
+          imageSource = 'placeholder';
         }
+
+        return {
+          ...pet,
+          displayImage: displayImage,
+          imageLoaded: false,
+          placeholderImage: imageSource === 'placeholder',
+          imageSource: imageSource
+        };
       });
 
+      // Fetch API images for pets that need them (same as PetListing)
       this.fetchApiImagesForPets(processedPets);
       return processedPets;
     },
 
     async fetchApiImagesForPets(pets) {
-      const petsNeedingImages = pets.filter(pet => pet.placeholderImage);
+      const petsNeedingImages = pets.filter(pet => pet.placeholderImage && pet.imageSource === 'placeholder');
+
       const batchSize = 3;
-      
+
       for (let i = 0; i < petsNeedingImages.length; i += batchSize) {
         const batch = petsNeedingImages.slice(i, i + batchSize);
         const promises = batch.map(async (pet) => {
@@ -285,6 +313,9 @@ export default {
             if (apiImage) {
               pet.displayImage = apiImage;
               pet.image = apiImage;
+              pet.placeholderImage = false;
+              pet.imageSource = 'api';
+
               // Update the array to trigger reactivity
               this.favoritePets = [...this.favoritePets];
             }
@@ -294,6 +325,7 @@ export default {
         });
 
         await Promise.allSettled(promises);
+
         if (i + batchSize < petsNeedingImages.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
@@ -305,24 +337,24 @@ export default {
       if (this.imageCache.has(cacheKey)) {
         return this.imageCache.get(cacheKey);
       }
-      
+
       try {
         const breedId = this.findBreedId(pet.breed, pet.type);
-        const apiUrl = pet.type === "dog" 
+        const apiUrl = pet.type === "dog"
           ? `${API_BASE_URL}/external/dog-images`
           : `${API_BASE_URL}/external/cat-images`;
-        
+
         const params = new URLSearchParams({ limit: "1" });
         if (breedId) params.append("breed_id", breedId);
-        
+
         const token = localStorage.getItem('authToken');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const response = await fetch(`${apiUrl}?${params}`, { headers });
-        
+
         if (!response.ok) throw new Error(`API error: ${response.status}`);
-        
+
         const data = await response.json();
         if (data && data.length > 0 && data[0].url) {
           const imageUrl = data[0].url;
@@ -338,12 +370,52 @@ export default {
 
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
-      if (!breeds.length) return null;
-      const breed = breeds.find(b => 
-        b.name.toLowerCase().includes(breedName.toLowerCase()) ||
-        breedName.toLowerCase().includes(b.name.toLowerCase())
+
+      if (!breeds.length) {
+        return null;
+      }
+
+      const normalizedBreedName = breedName.toLowerCase().trim();
+
+      let breed = breeds.find(b =>
+        b.name.toLowerCase().trim() === normalizedBreedName
       );
-      return breed ? breed.id : null;
+
+      if (breed) {
+        return breed.id;
+      }
+
+      breed = breeds.find(b => {
+        const apiName = b.name.toLowerCase().trim();
+        return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 4;
+      });
+
+      if (breed) {
+        return breed.id;
+      }
+
+      breed = breeds.find(b => {
+        const apiName = b.name.toLowerCase().trim();
+        return normalizedBreedName.includes(apiName) && apiName.length >= 4;
+      });
+
+      if (breed) {
+        return breed.id;
+      }
+
+      const breedWords = normalizedBreedName.split(/\s+/);
+      breed = breeds.find(b => {
+        const apiWords = b.name.toLowerCase().trim().split(/\s+/);
+        return breedWords.some(word =>
+          word.length >= 4 && apiWords.includes(word)
+        );
+      });
+
+      if (breed) {
+        return breed.id;
+      }
+
+      return null;
     },
 
     async loadAllBreeds() {
@@ -351,16 +423,20 @@ export default {
         const token = localStorage.getItem('authToken');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const [dogResponse, catResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
           fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
         ]);
-        
-        if (dogResponse.ok && catResponse.ok) {
+
+        if (dogResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
+        }
+
+        if (catResponse.ok) {
           this.allCatBreeds = await catResponse.json();
         }
+
       } catch (error) {
         console.error("Error fetching breed lists:", error);
       }
@@ -401,6 +477,15 @@ export default {
       }
     },
 
+    formatActivityLevel(activity) {
+      const activityMap = {
+        low: "Low",
+        medium: "Medium",
+        high: "High",
+      };
+      return activityMap[activity] || "Medium";
+    },
+
     getColoredPlaceholder(pet) {
       const colors = {
         dog: ['#ffb6c1', '#ffd1dc', '#ffecb3', '#c8e6c9'],
@@ -409,7 +494,7 @@ export default {
       const typeColors = colors[pet.type] || colors.dog;
       const color = typeColors[pet.id % typeColors.length];
       const emoji = pet.type === 'dog' ? '🐕' : '🐱';
-      
+
       return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='250' viewBox='0 0 300 250'%3E%3Crect fill='${color}' width='300' height='250'/%3E%3Ctext fill='%23666' font-size='24' font-family='system-ui' x='150' y='125' text-anchor='middle' dominant-baseline='middle'%3E${emoji}%3C/text%3E%3Ctext fill='%23333' font-size='16' font-family='system-ui' x='150' y='160' text-anchor='middle'%3E${pet.name}%3C/text%3E%3C/svg%3E`;
     },
 
@@ -418,17 +503,47 @@ export default {
     },
 
     onImageError(pet) {
-      if (pet.displayImage !== this.getColoredPlaceholder(pet)) {
+      if (pet.imageSource === 'database') {
+        pet.placeholderImage = true;
+        pet.imageSource = 'placeholder';
+        this.fetchApiImageForSinglePet(pet);
+      } else if (pet.imageSource === 'api') {
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      } else {
         pet.displayImage = this.getColoredPlaceholder(pet);
         pet.placeholderImage = false;
       }
+
       pet.imageLoaded = true;
+    },
+
+    async fetchApiImageForSinglePet(pet) {
+      try {
+        const apiImage = await this.fetchPetImage(pet);
+        if (apiImage) {
+          pet.displayImage = apiImage;
+          pet.image = apiImage;
+          pet.placeholderImage = false;
+          pet.imageSource = 'api';
+
+          this.favoritePets = [...this.favoritePets];
+        } else {
+          pet.displayImage = this.getColoredPlaceholder(pet);
+          pet.placeholderImage = false;
+        }
+      } catch (error) {
+        console.error(`Error fetching API image for ${pet.name}:`, error);
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
     }
   }
 }
 </script>
 
 <style scoped>
+/* Exact same styles as PetListing page */
 .compatibility-badge {
   position: absolute;
   top: 12px;
@@ -445,7 +560,7 @@ export default {
 
 .favorite-btn {
   position: absolute;
-  top: 12px;
+  bottom: 12px;
   right: 12px;
   background: rgba(255, 255, 255, 0.95);
   border: none;
@@ -484,9 +599,14 @@ export default {
   font-size: 0.7rem;
   font-weight: 500;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: 12px;
   border: 1px solid var(--border-light);
   z-index: 3;
+}
+
+.database-badge {
+  background-color: rgba(76, 175, 80, 0.95) !important;
+  color: white !important;
 }
 
 .image-loading {
@@ -544,24 +664,21 @@ export default {
 }
 
 .view-more-btn {
-  background: var(--primary-pink);
-  border: 2px solid var(--primary-pink);
-  color: var(--text-dark);
+  background: linear-gradient(135deg, #ff868a 0%, #ffa6a6 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
   font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
   transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 0.85rem;
+  border-radius: 8px;
   width: 100%;
 }
 
 .view-more-btn:hover {
-  background: var(--primary-pink-dark);
-  border-color: var(--primary-pink-dark);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-heavy);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+  background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
+  color: white;
 }
 
 .personality {

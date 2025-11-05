@@ -6,7 +6,8 @@
           <div class="quiz-card">
             <div class="quiz-header text-center mb-5">
               <h1>Find Your Perfect Match</h1>
-              <p class="lead" v-if="!hasExistingResults">Complete this quick quiz to help us match you with compatible pets</p>
+              <p class="lead" v-if="!hasExistingResults">Complete this quick quiz to help us match you with compatible
+                pets</p>
               <p class="lead" v-else>Update your preferences to improve your matches</p>
               <div class="progress mb-4">
                 <div class="progress-bar" :style="{ width: progress + '%' }"></div>
@@ -16,34 +17,31 @@
             <!-- Show current results if redoing quiz -->
             <div v-if="hasExistingResults && !completed" class="alert alert-info mb-4">
               <i class="bi bi-info-circle me-2"></i>
-              You've already completed this quiz. You can update your answers below to improve your matches.
+              You've already completed this quiz. You can update your answers below.
             </div>
 
             <form @submit.prevent="submitQuiz" v-if="!completed">
               <!-- Step 1: Basic Information -->
               <div v-if="currentStep === 1" class="quiz-step">
                 <h3 class="mb-4">Your Living Situation</h3>
-                
+
                 <div class="form-group mb-4">
                   <label class="form-label">What type of home do you live in?</label>
                   <div class="btn-group-vertical w-100">
-                    <button type="button" class="btn btn-outline-primary text-start" 
-                            :class="{ 'active': form.living_space === 'apartment' }"
-                            @click="form.living_space = 'apartment'">
+                    <button type="button" class="btn btn-outline-primary text-start"
+                      :class="{ 'active': form.living_space === 'apartment' }" @click="form.living_space = 'apartment'">
                       <i class="bi bi-building me-2"></i>
                       <strong>Apartment/Condo</strong>
                       <small class="d-block text-muted">Limited space, shared walls</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.living_space === 'house' }"
-                            @click="form.living_space = 'house'">
+                      :class="{ 'active': form.living_space === 'house' }" @click="form.living_space = 'house'">
                       <i class="bi bi-house me-2"></i>
                       <strong>House with Yard</strong>
                       <small class="d-block text-muted">Private space with outdoor access</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.living_space === 'farm' }"
-                            @click="form.living_space = 'farm'">
+                      :class="{ 'active': form.living_space === 'farm' }" @click="form.living_space = 'farm'">
                       <i class="bi bi-tree me-2"></i>
                       <strong>Farm/Rural Area</strong>
                       <small class="d-block text-muted">Large open spaces</small>
@@ -54,14 +52,12 @@
                 <div class="form-group mb-4">
                   <label class="form-label">Do you have a yard?</label>
                   <div class="btn-group w-100">
-                    <button type="button" class="btn btn-outline-primary"
-                            :class="{ 'active': form.has_yard === true }"
-                            @click="form.has_yard = true">
+                    <button type="button" class="btn btn-outline-primary" :class="{ 'active': form.has_yard === true }"
+                      @click="form.has_yard = true">
                       Yes
                     </button>
-                    <button type="button" class="btn btn-outline-primary"
-                            :class="{ 'active': form.has_yard === false }"
-                            @click="form.has_yard = false">
+                    <button type="button" class="btn btn-outline-primary" :class="{ 'active': form.has_yard === false }"
+                      @click="form.has_yard = false">
                       No
                     </button>
                   </div>
@@ -71,13 +67,12 @@
                   <label class="form-label">Do you have allergies to pets?</label>
                   <div class="btn-group w-100">
                     <button type="button" class="btn btn-outline-primary"
-                            :class="{ 'active': form.has_allergies === true }"
-                            @click="form.has_allergies = true">
+                      :class="{ 'active': form.has_allergies === true }" @click="form.has_allergies = true">
                       Yes
                     </button>
                     <button type="button" class="btn btn-outline-primary"
-                            :class="{ 'active': form.has_allergies === false }"
-                            @click="form.has_allergies = false; form.allergies = ''">
+                      :class="{ 'active': form.has_allergies === false }"
+                      @click="form.has_allergies = false; form.allergies = ''">
                       No
                     </button>
                   </div>
@@ -85,35 +80,32 @@
 
                 <div v-if="form.has_allergies" class="form-group mb-4">
                   <label class="form-label">What are you allergic to?</label>
-                  <input type="text" class="form-control" v-model="form.allergies" 
-                         placeholder="e.g., cat dander, dog hair...">
+                  <input type="text" class="form-control" v-model="form.allergies"
+                    placeholder="e.g., cat dander, dog hair...">
                 </div>
               </div>
 
               <!-- Step 2: Lifestyle & Experience -->
               <div v-if="currentStep === 2" class="quiz-step">
                 <h3 class="mb-4">Your Lifestyle & Experience</h3>
-                
+
                 <div class="form-group mb-4">
                   <label class="form-label">How active is your lifestyle?</label>
                   <div class="btn-group-vertical w-100">
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.activity_level === 'low' }"
-                            @click="form.activity_level = 'low'">
+                      :class="{ 'active': form.activity_level === 'low' }" @click="form.activity_level = 'low'">
                       <i class="bi bi-emoji-sunglasses me-2"></i>
                       <strong>Low Activity</strong>
                       <small class="d-block text-muted">Quiet home, limited outdoor time</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.activity_level === 'medium' }"
-                            @click="form.activity_level = 'medium'">
+                      :class="{ 'active': form.activity_level === 'medium' }" @click="form.activity_level = 'medium'">
                       <i class="bi bi-emoji-smile me-2"></i>
                       <strong>Moderate Activity</strong>
                       <small class="d-block text-muted">Daily walks, some playtime</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.activity_level === 'high' }"
-                            @click="form.activity_level = 'high'">
+                      :class="{ 'active': form.activity_level === 'high' }" @click="form.activity_level = 'high'">
                       <i class="bi bi-emoji-laughing me-2"></i>
                       <strong>High Activity</strong>
                       <small class="d-block text-muted">Very active, lots of outdoor time</small>
@@ -125,20 +117,19 @@
                   <label class="form-label">What's your experience with pets?</label>
                   <div class="btn-group-vertical w-100">
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.pet_experience === 'none' }"
-                            @click="form.pet_experience = 'none'">
+                      :class="{ 'active': form.pet_experience === 'none' }" @click="form.pet_experience = 'none'">
                       <strong>First-time Owner</strong>
                       <small class="d-block text-muted">New to pet ownership</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.pet_experience === 'some_experience' }"
-                            @click="form.pet_experience = 'some_experience'">
+                      :class="{ 'active': form.pet_experience === 'some_experience' }"
+                      @click="form.pet_experience = 'some_experience'">
                       <strong>Some Experience</strong>
                       <small class="d-block text-muted">Had pets before</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.pet_experience === 'experienced' }"
-                            @click="form.pet_experience = 'experienced'">
+                      :class="{ 'active': form.pet_experience === 'experienced' }"
+                      @click="form.pet_experience = 'experienced'">
                       <strong>Experienced Owner</strong>
                       <small class="d-block text-muted">Very comfortable with pets</small>
                     </button>
@@ -149,20 +140,19 @@
                   <label class="form-label">How would you describe your home environment?</label>
                   <div class="btn-group-vertical w-100">
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.home_environment === 'quiet' }"
-                            @click="form.home_environment = 'quiet'">
+                      :class="{ 'active': form.home_environment === 'quiet' }" @click="form.home_environment = 'quiet'">
                       <strong>Quiet & Calm</strong>
                       <small class="d-block text-muted">Peaceful, low noise</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.home_environment === 'moderate' }"
-                            @click="form.home_environment = 'moderate'">
+                      :class="{ 'active': form.home_environment === 'moderate' }"
+                      @click="form.home_environment = 'moderate'">
                       <strong>Moderately Active</strong>
                       <small class="d-block text-muted">Some daily activity</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.home_environment === 'active' }"
-                            @click="form.home_environment = 'active'">
+                      :class="{ 'active': form.home_environment === 'active' }"
+                      @click="form.home_environment = 'active'">
                       <strong>Very Active</strong>
                       <small class="d-block text-muted">Busy, lots of coming and going</small>
                     </button>
@@ -173,20 +163,17 @@
                   <label class="form-label">How many hours will your pet be alone daily?</label>
                   <div class="btn-group-vertical w-100">
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.hours_alone === '0-4' }"
-                            @click="form.hours_alone = '0-4'">
+                      :class="{ 'active': form.hours_alone === '0-4' }" @click="form.hours_alone = '0-4'">
                       <strong>0-4 Hours</strong>
                       <small class="d-block text-muted">Someone is usually home</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.hours_alone === '4-8' }"
-                            @click="form.hours_alone = '4-8'">
+                      :class="{ 'active': form.hours_alone === '4-8' }" @click="form.hours_alone = '4-8'">
                       <strong>4-8 Hours</strong>
                       <small class="d-block text-muted">Typical work day</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.hours_alone === '8+' }"
-                            @click="form.hours_alone = '8+'">
+                      :class="{ 'active': form.hours_alone === '8+' }" @click="form.hours_alone = '8+'">
                       <strong>8+ Hours</strong>
                       <small class="d-block text-muted">Long periods alone</small>
                     </button>
@@ -197,18 +184,17 @@
               <!-- Step 3: Family, Preferences & Comfort -->
               <div v-if="currentStep === 3" class="quiz-step">
                 <h3 class="mb-4">Family, Preferences & Comfort</h3>
-                
+
                 <div class="form-group mb-4">
                   <label class="form-label">Do you have children?</label>
                   <div class="btn-group w-100">
                     <button type="button" class="btn btn-outline-primary"
-                            :class="{ 'active': form.has_children === true }"
-                            @click="form.has_children = true">
+                      :class="{ 'active': form.has_children === true }" @click="form.has_children = true">
                       Yes
                     </button>
                     <button type="button" class="btn btn-outline-primary"
-                            :class="{ 'active': form.has_children === false }"
-                            @click="form.has_children = false; form.children_ages = ''">
+                      :class="{ 'active': form.has_children === false }"
+                      @click="form.has_children = false; form.children_ages = ''">
                       No
                     </button>
                   </div>
@@ -216,21 +202,19 @@
 
                 <div v-if="form.has_children" class="form-group mb-4">
                   <label class="form-label">Ages of children?</label>
-                  <input type="text" class="form-control" v-model="form.children_ages" 
-                         placeholder="e.g., 5 and 8 years old">
+                  <input type="text" class="form-control" v-model="form.children_ages"
+                    placeholder="e.g., 5 and 8 years old">
                 </div>
 
                 <div class="form-group mb-4">
                   <label class="form-label">Do you have other pets?</label>
                   <div class="btn-group w-100">
-                    <button type="button" class="btn btn-outline-primary"
-                            :class="{ 'active': form.has_pets === true }"
-                            @click="form.has_pets = true">
+                    <button type="button" class="btn btn-outline-primary" :class="{ 'active': form.has_pets === true }"
+                      @click="form.has_pets = true">
                       Yes
                     </button>
-                    <button type="button" class="btn btn-outline-primary"
-                            :class="{ 'active': form.has_pets === false }"
-                            @click="form.has_pets = false; form.pets_details = ''">
+                    <button type="button" class="btn btn-outline-primary" :class="{ 'active': form.has_pets === false }"
+                      @click="form.has_pets = false; form.pets_details = ''">
                       No
                     </button>
                   </div>
@@ -238,28 +222,28 @@
 
                 <div v-if="form.has_pets" class="form-group mb-4">
                   <label class="form-label">Tell us about your other pets</label>
-                  <input type="text" class="form-control" v-model="form.pets_details" 
-                         placeholder="e.g., 1 cat, 2 dogs...">
+                  <input type="text" class="form-control" v-model="form.pets_details"
+                    placeholder="e.g., 1 cat, 2 dogs...">
                 </div>
 
                 <div class="form-group mb-4">
                   <label class="form-label">Your comfort with grooming:</label>
                   <div class="btn-group-vertical w-100">
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.grooming_comfort === 'uncomfortable' }"
-                            @click="form.grooming_comfort = 'uncomfortable'">
+                      :class="{ 'active': form.grooming_comfort === 'uncomfortable' }"
+                      @click="form.grooming_comfort = 'uncomfortable'">
                       <strong>Uncomfortable</strong>
                       <small class="d-block text-muted">Prefer low-maintenance pets</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.grooming_comfort === 'neutral' }"
-                            @click="form.grooming_comfort = 'neutral'">
+                      :class="{ 'active': form.grooming_comfort === 'neutral' }"
+                      @click="form.grooming_comfort = 'neutral'">
                       <strong>Neutral</strong>
                       <small class="d-block text-muted">Okay with some grooming</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.grooming_comfort === 'comfortable' }"
-                            @click="form.grooming_comfort = 'comfortable'">
+                      :class="{ 'active': form.grooming_comfort === 'comfortable' }"
+                      @click="form.grooming_comfort = 'comfortable'">
                       <strong>Comfortable</strong>
                       <small class="d-block text-muted">Happy to groom regularly</small>
                     </button>
@@ -270,20 +254,20 @@
                   <label class="form-label">Your comfort with training:</label>
                   <div class="btn-group-vertical w-100">
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.training_comfort === 'uncomfortable' }"
-                            @click="form.training_comfort = 'uncomfortable'">
+                      :class="{ 'active': form.training_comfort === 'uncomfortable' }"
+                      @click="form.training_comfort = 'uncomfortable'">
                       <strong>Uncomfortable</strong>
                       <small class="d-block text-muted">Prefer already-trained pets</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.training_comfort === 'neutral' }"
-                            @click="form.training_comfort = 'neutral'">
+                      :class="{ 'active': form.training_comfort === 'neutral' }"
+                      @click="form.training_comfort = 'neutral'">
                       <strong>Neutral</strong>
                       <small class="d-block text-muted">Can do basic training</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.training_comfort === 'comfortable' }"
-                            @click="form.training_comfort = 'comfortable'">
+                      :class="{ 'active': form.training_comfort === 'comfortable' }"
+                      @click="form.training_comfort = 'comfortable'">
                       <strong>Comfortable</strong>
                       <small class="d-block text-muted">Enjoy training challenges</small>
                     </button>
@@ -294,20 +278,17 @@
                   <label class="form-label">Preferred energy level in a pet:</label>
                   <div class="btn-group-vertical w-100">
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.energy_level === 'low' }"
-                            @click="form.energy_level = 'low'">
+                      :class="{ 'active': form.energy_level === 'low' }" @click="form.energy_level = 'low'">
                       <strong>Low Energy</strong>
                       <small class="d-block text-muted">Calm, relaxed companion</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.energy_level === 'medium' }"
-                            @click="form.energy_level = 'medium'">
+                      :class="{ 'active': form.energy_level === 'medium' }" @click="form.energy_level = 'medium'">
                       <strong>Medium Energy</strong>
                       <small class="d-block text-muted">Balanced activity level</small>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.energy_level === 'high' }"
-                            @click="form.energy_level = 'high'">
+                      :class="{ 'active': form.energy_level === 'high' }" @click="form.energy_level = 'high'">
                       <strong>High Energy</strong>
                       <small class="d-block text-muted">Active, needs lots of exercise</small>
                     </button>
@@ -318,20 +299,18 @@
                   <label class="form-label">What type of pet are you looking for?</label>
                   <div class="btn-group-vertical w-100">
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.preferred_pet_type === 'dog' }"
-                            @click="form.preferred_pet_type = 'dog'">
+                      :class="{ 'active': form.preferred_pet_type === 'dog' }" @click="form.preferred_pet_type = 'dog'">
                       <i class="bi bi-bootstrap me-2"></i>
                       <strong>Dogs Only</strong>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.preferred_pet_type === 'cat' }"
-                            @click="form.preferred_pet_type = 'cat'">
+                      :class="{ 'active': form.preferred_pet_type === 'cat' }" @click="form.preferred_pet_type = 'cat'">
                       <i class="bi bi-bootstrap me-2"></i>
                       <strong>Cats Only</strong>
                     </button>
                     <button type="button" class="btn btn-outline-primary text-start"
-                            :class="{ 'active': form.preferred_pet_type === 'both' }"
-                            @click="form.preferred_pet_type = 'both'">
+                      :class="{ 'active': form.preferred_pet_type === 'both' }"
+                      @click="form.preferred_pet_type = 'both'">
                       <i class="bi bi-bootstrap me-2"></i>
                       <strong>Open to Both</strong>
                     </button>
@@ -342,14 +321,12 @@
               <!-- Navigation Buttons -->
               <div class="quiz-navigation mt-5">
                 <div class="d-flex justify-content-between">
-                  <button type="button" class="btn btn-outline-secondary" 
-                          @click="previousStep" v-if="currentStep > 1">
+                  <button type="button" class="btn btn-outline-secondary" @click="previousStep" v-if="currentStep > 1">
                     <i class="bi bi-arrow-left me-2"></i>Back
                   </button>
                   <div v-else></div>
 
-                  <button type="button" class="btn btn-primary" 
-                          @click="nextStep" v-if="currentStep < totalSteps">
+                  <button type="button" class="btn btn-primary" @click="nextStep" v-if="currentStep < totalSteps">
                     Continue <i class="bi bi-arrow-right ms-2"></i>
                   </button>
 
@@ -404,13 +381,13 @@ export default {
         has_yard: false,
         has_allergies: false,
         allergies: '',
-        
+
         // Step 2: Lifestyle & Experience  
         activity_level: '',
         pet_experience: 'some_experience',
         home_environment: 'quiet',
         hours_alone: '4-8',
-        
+
         // Step 3: Family, Preferences & Comfort
         has_children: false,
         children_ages: '',
@@ -442,33 +419,136 @@ export default {
         });
 
         if (response.ok) {
-          const existingResults = await response.json();
-          this.hasExistingResults = true;
-          
-          // Map existing results to form fields
-          this.form = {
-            living_space: existingResults.living_space || '',
-            has_yard: existingResults.has_yard || false,
-            activity_level: existingResults.activity_level || '',
-            preferred_pet_type: existingResults.preferred_pet_type || '',
-            has_allergies: existingResults.has_allergies || false,
-            allergies: existingResults.allergies || '',
-            pet_experience: existingResults.pet_experience || 'some_experience',
-            home_environment: existingResults.home_environment || 'quiet',
-            has_children: existingResults.has_children || false,
-            children_ages: existingResults.children_ages || '',
-            has_pets: existingResults.has_pets || false,
-            pets_details: existingResults.pets_details || '',
-            hours_alone: existingResults.hours_alone || '4-8',
-            grooming_comfort: existingResults.grooming_comfort || 'neutral',
-            training_comfort: existingResults.training_comfort || 'neutral',
-            energy_level: existingResults.energy_level || 'medium'
-          };
+          const result = await response.json();
+
+          if (result.has_completed_quiz && result.profile) {
+            const existingResults = result.profile;
+            this.hasExistingResults = true;
+
+            // Map database fields back to frontend form fields
+            this.form = {
+              // Step 1
+              living_space: existingResults.living_space || '',
+              has_yard: existingResults.has_yard || false,
+              has_allergies: existingResults.has_allergies || false,
+              allergies: existingResults.allergies || '',
+
+              // Step 2  
+              activity_level: existingResults.activity_level || '',
+              pet_experience: this.mapExperienceToFrontend(existingResults.experience_level) || 'some_experience',
+              home_environment: this.mapHomeEnvironmentToFrontend(existingResults.home_environment) || 'quiet',
+              hours_alone: this.mapTimeToFrontend(existingResults.time_commitment) || '4-8',
+
+              // Step 3
+              has_children: existingResults.has_children || false,
+              children_ages: existingResults.children_ages || '',
+              has_pets: existingResults.has_other_pets || false,
+              pets_details: existingResults.other_pets_details || '',
+              grooming_comfort: existingResults.grooming_comfort || 'neutral',
+              training_comfort: existingResults.training_comfort || 'neutral',
+              energy_level: existingResults.energy_level || 'medium',
+              preferred_pet_type: existingResults.preferred_pet_type || ''
+            };
+
+            console.log('Loaded existing results:', this.form);
+          }
         }
       } catch (error) {
-        console.log('No existing quiz results found');
+        console.log('No existing quiz results found:', error);
         this.hasExistingResults = false;
       }
+    },
+
+    mapExperienceToFrontend(dbValue) {
+      const mapping = {
+        'first_time': 'none',
+        'some_experience': 'some_experience',
+        'experienced': 'experienced'
+      };
+      return mapping[dbValue] || 'some_experience';
+    },
+
+    mapHomeEnvironmentToFrontend(dbValue) {
+      const mapping = {
+        'quiet': 'quiet',
+        'active': 'moderate',  // Map 'active' back to 'moderate' for frontend
+        'very_active': 'active'  // Map 'very_active' back to 'active' for frontend
+      };
+      return mapping[dbValue] || 'quiet';
+    },
+
+    mapTimeToFrontend(dbValue) {
+      const mapping = {
+        'low': '0-4',
+        'medium': '4-8',
+        'high': '8+'
+      };
+      return mapping[dbValue] || '4-8';
+    },
+
+    validateStep() {
+      let errors = [];
+
+      switch (this.currentStep) {
+        case 1:
+          if (!this.form.living_space) {
+            errors.push('Please select your living space');
+          }
+          if (this.form.has_yard === null || this.form.has_yard === undefined) {
+            errors.push('Please indicate if you have a yard');
+          }
+          if (this.form.has_allergies === null || this.form.has_allergies === undefined) {
+            errors.push('Please indicate if you have allergies');
+          }
+          if (this.form.has_allergies && (!this.form.allergies || !this.form.allergies.trim())) {
+            errors.push('Please specify what you are allergic to');
+          }
+          break;
+        case 2:
+          if (!this.form.activity_level) {
+            errors.push('Please select your activity level');
+          }
+          if (!this.form.pet_experience) {
+            errors.push('Please select your experience level');
+          }
+          if (!this.form.home_environment) {
+            errors.push('Please select your home environment');
+          }
+          if (!this.form.hours_alone) {
+            errors.push('Please select how many hours your pet will be alone daily');
+          }
+          break;
+        case 3:
+          if (!this.form.preferred_pet_type) {
+            errors.push('Please select your preferred pet type');
+          }
+          if (!this.form.grooming_comfort) {
+            errors.push('Please select your grooming comfort level');
+          }
+          if (!this.form.training_comfort) {
+            errors.push('Please select your training comfort level');
+          }
+          if (!this.form.energy_level) {
+            errors.push('Please select preferred energy level');
+          }
+          if (this.form.has_children && (!this.form.children_ages || !this.form.children_ages.trim())) {
+            errors.push('Please specify the ages of your children');
+          }
+          if (this.form.has_pets && (!this.form.pets_details || !this.form.pets_details.trim())) {
+            errors.push('Please tell us about your other pets');
+          }
+          break;
+      }
+
+      if (errors.length > 0) {
+        // Show user-friendly error messages
+        const errorMessage = 'Please complete the following fields:\n\n' +
+          errors.map(error => `• ${error}`).join('\n');
+        alert(errorMessage);
+        return false;
+      }
+
+      return true;
     },
 
     nextStep() {
@@ -476,54 +556,6 @@ export default {
       if (this.validateStep()) {
         this.currentStep++;
       }
-    },
-
-    validateStep() {
-      switch (this.currentStep) {
-        case 1:
-          if (!this.form.living_space) {
-            alert('Please select your living space');
-            return false;
-          }
-          break;
-        case 2:
-          if (!this.form.activity_level) {
-            alert('Please select your activity level');
-            return false;
-          }
-          if (!this.form.pet_experience) {
-            alert('Please select your experience level');
-            return false;
-          }
-          if (!this.form.home_environment) {
-            alert('Please select your home environment');
-            return false;
-          }
-          if (!this.form.hours_alone) {
-            alert('Please select hours alone');
-            return false;
-          }
-          break;
-        case 3:
-          if (!this.form.preferred_pet_type) {
-            alert('Please select your preferred pet type');
-            return false;
-          }
-          if (!this.form.grooming_comfort) {
-            alert('Please select your grooming comfort level');
-            return false;
-          }
-          if (!this.form.training_comfort) {
-            alert('Please select your training comfort level');
-            return false;
-          }
-          if (!this.form.energy_level) {
-            alert('Please select preferred energy level');
-            return false;
-          }
-          break;
-      }
-      return true;
     },
 
     previousStep() {
@@ -538,9 +570,9 @@ export default {
       }
 
       this.loading = true;
-      
+
       try {
-        // Ensure all required fields have values
+        // Map frontend field names to backend field names
         const submissionData = {
           living_space: this.form.living_space,
           has_yard: this.form.has_yard,
@@ -626,8 +658,15 @@ export default {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .btn-group-vertical .btn {
