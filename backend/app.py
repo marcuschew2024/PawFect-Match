@@ -8,6 +8,11 @@ import jwt
 import requests
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
+import base64
+from io import BytesIO
+from PIL import Image
+import uuid
+
 
 load_dotenv()
 
@@ -49,6 +54,34 @@ def token_required(f):
         return f(current_user, *args, **kwargs)
     
     return decorated
+
+# Image upload configuration
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def compress_image(image_data, max_size=(1200, 1200), quality=85):
+    """Compress image to reduce file size while maintaining quality"""
+    try:
+        image = Image.open(BytesIO(image_data))
+        
+        # Convert to RGB if necessary
+        if image.mode in ('RGBA', 'P'):
+            image = image.convert('RGB')
+        
+        # Resize if too large
+        image.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Compress
+        output = BytesIO()
+        image.save(output, format='JPEG', quality=quality, optimize=True)
+        return output.getvalue()
+    except Exception as e:
+        print(f"Image compression error: {e}")
+        return image_data  # Return original if compression fails
 
 # AUTH ROUTES
 @app.route('/api/auth/signup', methods=['POST'])
@@ -190,7 +223,7 @@ def update_pet(pet_id):
             'age': data.get('age'),
             'size': data.get('size'),
             'personality': data.get('personality'),
-            'furColor': data.get('furColor'),
+            'fur_color': data.get('fur_color'),
             'available': data.get('available'),
             'updated_at': datetime.now(timezone.utc).isoformat()
         }
@@ -326,46 +359,51 @@ def get_pets():
 @app.route('/api/pets/<int:pet_id>', methods=['GET'])
 def get_pet(pet_id):
     try:
-        response = supabase.table('pets').select('''
-            *,
-            pet_images(*)
-        ''').eq('id', pet_id).execute()
+        print(f"🔍 Fetching pet with ID: {pet_id}")
         
-        if not response.data:
+        # Get pet data
+        pet_response = supabase.table('pets').select('*').eq('id', pet_id).execute()
+        
+        if not pet_response.data:
             return jsonify({'error': 'Pet not found'}), 404
         
-        pet = response.data[0]
+        pet_data = pet_response.data[0]
+        print(f"🐕 Pet found: {pet_data['name']}")
         
-        # Format images
-        images = pet.get('pet_images', [])
-        if not images and pet.get('image'):
-            # Fallback for pets with only old image field
-            images = [{'image_url': pet['image'], 'image_order': 0}]
+        # Get images separately
+        images_response = supabase.table('pet_images').select('*').eq('pet_id', pet_id).order('image_order').execute()
+        images_array = images_response.data if images_response.data else []
         
-        # Sort images by order
-        images.sort(key=lambda x: x.get('image_order', 0))
+        print(f"📸 Found {len(images_array)} images for pet {pet_id}")
         
         # Create response with images array
         pet_response = {
-            **pet,
-            'images': images,
-            'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+            **pet_data,
+            'images': images_array,
+            'main_image': pet_data.get('main_image') or (images_array[0]['image_url'] if images_array else None)
         }
         
-        # Remove the pet_images key
-        if 'pet_images' in pet_response:
-            del pet_response['pet_images']
-        
+        print(f"✅ Final pet response with {len(images_array)} images")
         return jsonify(pet_response)
     except Exception as e:
+        print(f"❌ Error in get_pet: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ADD PET ROUTE
-# ADD PET ROUTE - UPDATED FOR MULTIPLE IMAGES
+# Update the create_pet route to handle multiple images better
 @app.route('/api/pets', methods=['POST'])
 def create_pet():
     try:
         data = request.get_json()
+        print(f"📝 Creating pet with data keys: {list(data.keys())}")
+        images = data.get('images', [])
+        print(f"🖼️ Images received: {len(images)} images")
+        
+        # Validate required fields
+        required_fields = ['name', 'type', 'breed', 'age', 'size', 'gender', 'personality']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'Missing required field: {field}'}), 400
         
         # Create pet data for Supabase
         pet_data = {
@@ -377,21 +415,23 @@ def create_pet():
             'gender': data.get('gender'),
             'personality': data.get('personality'),
             'activity_level': data.get('activity_level', 'medium'),
-            'furColor': data.get('furColor', ''),
+            'fur_color': data.get('fur_color', ''),
             'vaccination_status': data.get('vaccination_status', 'Unknown'),
             'adoption_fee': data.get('adoption_fee', 0),
             'health_info': data.get('health_info', ''),
             'location': data.get('location', 'Singapore'),
             'available': True,
             'is_adopted': False,
-            'created_at': datetime.now(timezone.utc).isoformat()
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'background': data.get('background', ''),
+            'good_with_children': data.get('good_with_children'),
+            'good_with_other_pets': data.get('good_with_other_pets'),
+            'vaccinated': data.get('vaccinated'),
+            'neutered': data.get('neutered'),
+            'hdb_approved': data.get('hdb_approved', False)
         }
         
-        # Handle single image (backward compatibility)
-        single_image = data.get('image')
-        if single_image:
-            pet_data['main_image'] = single_image
-            pet_data['image'] = single_image  # Keep for backward compatibility
+        print(f"🐕 Pet data prepared, inserting into database...")
         
         # Insert into Supabase
         response = supabase.table('pets').insert(pet_data).execute()
@@ -399,69 +439,84 @@ def create_pet():
         if response.data:
             new_pet = response.data[0]
             pet_id = new_pet['id']
+            print(f"✅ Pet created with ID: {pet_id}")
             
-            # Handle multiple images if provided
+            # Handle multiple images
             images = data.get('images', [])
-            if images:
-                # If images is an array of URLs
+            print(f"🖼️ Processing {len(images)} images for pet {pet_id}")
+            
+            if images and len(images) > 0:
                 image_records = []
                 for i, image_url in enumerate(images):
                     if isinstance(image_url, str) and image_url.strip():
-                        image_records.append({
+                        image_record = {
                             'pet_id': pet_id,
                             'image_url': image_url.strip(),
                             'image_order': i
-                        })
+                        }
+                        image_records.append(image_record)
+                        print(f"📸 Prepared image {i} for saving")
+                
+                print(f"💾 Attempting to save {len(image_records)} images to pet_images table")
                 
                 if image_records:
-                    # Insert all images
-                    supabase.table('pet_images').insert(image_records).execute()
+                    try:
+                        # Insert all images in one batch
+                        image_response = supabase.table('pet_images').insert(image_records).execute()
+                        
+                        if image_response.data:
+                            print(f"✅ SUCCESS: Saved {len(image_response.data)} images to pet_images table")
+                            for img in image_response.data:
+                                print(f"   - Image ID: {img['id']}, Order: {img['image_order']}, URL length: {len(img['image_url'])}")
+                        else:
+                            print(f"❌ FAILED: No data returned from image insert: {image_response}")
+                            
+                    except Exception as e:
+                        print(f"❌ EXCEPTION when saving images: {str(e)}")
                     
                     # Set first image as main_image
                     first_image = image_records[0]['image_url']
-                    supabase.table('pets').update({
+                    print(f"⭐ Setting main image from first image")
+                    update_response = supabase.table('pets').update({
                         'main_image': first_image,
-                        'image': first_image  # Keep for backward compatibility
+                        'image': first_image
                     }).eq('id', pet_id).execute()
-                    
-                    new_pet['main_image'] = first_image
-                    new_pet['image'] = first_image
+                    print(f"✅ Main image updated: {update_response.data is not None}")
             
-            # Get the complete pet with images
-            complete_pet = supabase.table('pets').select('''
-                *,
-                pet_images(*)
-            ''').eq('id', pet_id).execute()
+            # FIXED: Return the complete pet with images using a different approach
+            print(f"🔍 Fetching complete pet data with images...")
             
-            if complete_pet.data:
-                pet_with_images = complete_pet.data[0]
-                # Format the response
-                images_array = pet_with_images.get('pet_images', [])
-                if not images_array and single_image:
-                    images_array = [{'image_url': single_image, 'image_order': 0}]
+            # First get the pet
+            pet_response = supabase.table('pets').select('*').eq('id', pet_id).execute()
+            if not pet_response.data:
+                return jsonify({'error': 'Pet not found after creation'}), 500
                 
-                images_array.sort(key=lambda x: x.get('image_order', 0))
-                
-                final_response = {
-                    **pet_with_images,
-                    'images': images_array,
-                    'main_image': pet_with_images.get('main_image') or (images_array[0]['image_url'] if images_array else None)
-                }
-                
-                if 'pet_images' in final_response:
-                    del final_response['pet_images']
-                
-                return jsonify(final_response), 201
+            pet_data = pet_response.data[0]
             
-            return jsonify(new_pet), 201
+            # Then get the images separately
+            images_response = supabase.table('pet_images').select('*').eq('pet_id', pet_id).order('image_order').execute()
+            images_array = images_response.data if images_response.data else []
+            
+            print(f"📊 Pet data retrieved, found {len(images_array)} images separately")
+            
+            # Combine the data
+            final_response = {
+                **pet_data,
+                'images': images_array,
+                'main_image': pet_data.get('main_image') or (images_array[0]['image_url'] if images_array else None)
+            }
+            
+            print(f"🎉 Final response ready with {len(images_array)} images")
+            return jsonify(final_response), 201
         else:
-            print("Supabase error:", response)
+            print(f"❌ Supabase error creating pet: {response}")
             return jsonify({'error': 'Failed to create pet'}), 400
         
     except Exception as e:
-        print('Error creating pet:', e)
+        print(f'❌ Error creating pet: {str(e)}')
         return jsonify({'error': f'Failed to create pet: {str(e)}'}), 500
-
+    
+    
 # PET IMAGES MANAGEMENT
 @app.route('/api/pets/<int:pet_id>/images', methods=['POST'])
 def add_pet_images(pet_id):
@@ -905,13 +960,20 @@ def get_quiz_results(current_user):
         response = supabase.table('user_profiles').select('*').eq('user_id', current_user).execute()
         
         if response.data:
-            return jsonify(response.data[0])
+            return jsonify({
+                'has_completed_quiz': True,
+                'profile': response.data[0]
+            })
         else:
-            return jsonify({'error': 'No quiz results found'}), 404
+            # Return explicit indicator that quiz hasn't been taken
+            return jsonify({
+                'has_completed_quiz': False,
+                'message': 'Quiz not completed yet'
+            }), 200
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+    
 # FAVORITES ROUTES
 @app.route('/api/user/favorites', methods=['GET'])
 @token_required
@@ -1074,6 +1136,43 @@ def get_cat_images():
         return jsonify(response.json())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+# Add this route after the existing routes (before the health check)
+@app.route('/api/upload-image', methods=['POST'])
+def upload_image():
+    """Handle image upload and return URL"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image provided'}), 400
+        
+        file = request.files['image']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No image selected'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed. Use: PNG, JPG, JPEG, GIF, WEBP'}), 400
+        
+        # Read and validate file size
+        file_data = file.read()
+        if len(file_data) > MAX_IMAGE_SIZE:
+            return jsonify({'error': 'File too large. Maximum 5MB allowed'}), 400
+        
+        # Compress image
+        compressed_data = compress_image(file_data)
+        
+        # Convert to base64 for storage (in production, use cloud storage)
+        image_b64 = base64.b64encode(compressed_data).decode('utf-8')
+        image_url = f"data:{file.mimetype};base64,{image_b64}"
+        
+        return jsonify({
+            'url': image_url,
+            'message': 'Image uploaded successfully'
+        }), 200
+        
+    except Exception as e:
+        print(f"Upload error: {e}")
+        return jsonify({'error': 'Failed to upload image'}), 500
 
 # Health check
 @app.route('/api/health', methods=['GET'])

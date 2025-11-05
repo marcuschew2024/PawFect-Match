@@ -9,7 +9,7 @@
           </div>
 
           <div class="adoption-card">
-            <form @submit.prevent="submitPet" class="adoption-form" enctype="multipart/form-data">
+            <form @submit.prevent="submitPet" class="adoption-form">
               <!-- Basic Information -->
               <div class="form-section mb-4">
                 <h4 class="section-title">Basic Information</h4>
@@ -70,6 +70,7 @@
               <!-- Image Upload -->
               <div class="form-section mb-4">
                 <h4 class="section-title">Pet Images</h4>
+                <p class="text-muted mb-3">Upload multiple images (up to 5). The first image will be used as the main photo.</p>
                 
                 <!-- File Upload -->
                 <div class="mb-3">
@@ -83,11 +84,11 @@
                     @change="handleFileUpload"
                     ref="fileInput"
                   >
-                  <div class="form-text">You can select multiple images. Maximum 5 images, 5MB each.</div>
+                  <div class="form-text">Select multiple images (PNG, JPG, JPEG). Maximum 5 images, 5MB each.</div>
                 </div>
 
                 <!-- URL Upload -->
-                <div class="mb-3">
+                <!-- <div class="mb-3">
                   <label for="imageUrls" class="form-label">Or Add Image URLs</label>
                   <div class="input-group mb-2">
                     <input 
@@ -100,16 +101,16 @@
                       type="button" 
                       class="btn btn-outline-secondary" 
                       @click="addImageUrl"
-                      :disabled="!newImageUrl"
+                      :disabled="!newImageUrl || uploadedImages.length >= 5"
                     >
                       Add URL
                     </button>
                   </div>
-                </div>
+                </div> -->
 
                 <!-- Image Previews -->
                 <div v-if="uploadedImages.length > 0" class="image-previews mt-4">
-                  <h6>Selected Images:</h6>
+                  <h6>Selected Images ({{ uploadedImages.length }}/5):</h6>
                   <div class="row">
                     <div 
                       v-for="(image, index) in uploadedImages" 
@@ -123,6 +124,9 @@
                           class="img-thumbnail"
                           style="height: 150px; width: 100%; object-fit: cover;"
                         >
+                        <div class="position-absolute top-0 start-0 m-1">
+                          <span v-if="index === 0" class="badge bg-primary">Main</span>
+                        </div>
                         <button 
                           type="button" 
                           class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
@@ -130,12 +134,24 @@
                         >
                           ×
                         </button>
-                        <div class="image-info small text-muted p-1">
-                          {{ image.file ? image.file.name : 'URL' }}
+                        <div class="image-info small text-muted p-1 text-truncate">
+                          {{ image.file ? image.file.name : 'URL Image' }}
                         </div>
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- Background Story -->
+              <div class="form-section mb-4">
+                <h4 class="section-title">Background Story</h4>
+                <div class="mb-3">
+                  <label for="petBackground" class="form-label">Pet's Background Story</label>
+                  <textarea class="form-control" id="petBackground" rows="4" 
+                            v-model="form.background"
+                            placeholder="Tell us about the pet's history, where they came from, any special circumstances..."></textarea>
+                  <div class="form-text">This helps potential adopters understand the pet's journey and special needs.</div>
                 </div>
               </div>
 
@@ -163,7 +179,7 @@
                   <div class="col-md-6 mb-3">
                     <label for="petColor" class="form-label">Fur Color</label>
                     <input type="text" class="form-control" id="petColor" 
-                           v-model="form.furColor" placeholder="e.g., Brown, Black, White">
+                           v-model="form.fur_color" placeholder="e.g., Brown, Black, White">
                   </div>
                 </div>
               </div>
@@ -204,8 +220,118 @@
                 </div>
               </div>
 
+              <!-- Behavior & Compatibility -->
+              <div class="form-section mb-4">
+                <h4 class="section-title">Behavior & Compatibility</h4>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Good with Children</label>
+                    <div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="goodWithChildrenYes" 
+                               v-model="form.good_with_children" :value="true">
+                        <label class="form-check-label" for="goodWithChildrenYes">Yes</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="goodWithChildrenNo" 
+                               v-model="form.good_with_children" :value="false">
+                        <label class="form-check-label" for="goodWithChildrenNo">No</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="goodWithChildrenUnknown" 
+                               v-model="form.good_with_children" :value="null">
+                        <label class="form-check-label" for="goodWithChildrenUnknown">Unknown</label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Good with Other Pets</label>
+                    <div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="goodWithPetsYes" 
+                               v-model="form.good_with_other_pets" :value="true">
+                        <label class="form-check-label" for="goodWithPetsYes">Yes</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="goodWithPetsNo" 
+                               v-model="form.good_with_other_pets" :value="false">
+                        <label class="form-check-label" for="goodWithPetsNo">No</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="goodWithPetsUnknown" 
+                               v-model="form.good_with_other_pets" :value="null">
+                        <label class="form-check-label" for="goodWithPetsUnknown">Unknown</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Vaccinated</label>
+                    <div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="vaccinatedYes" 
+                               v-model="form.vaccinated" :value="true">
+                        <label class="form-check-label" for="vaccinatedYes">Yes</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="vaccinatedNo" 
+                               v-model="form.vaccinated" :value="false">
+                        <label class="form-check-label" for="vaccinatedNo">No</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="vaccinatedUnknown" 
+                               v-model="form.vaccinated" :value="null">
+                        <label class="form-check-label" for="vaccinatedUnknown">Unknown</label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Neutered/Spayed</label>
+                    <div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="neuteredYes" 
+                               v-model="form.neutered" :value="true">
+                        <label class="form-check-label" for="neuteredYes">Yes</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="neuteredNo" 
+                               v-model="form.neutered" :value="false">
+                        <label class="form-check-label" for="neuteredNo">No</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="neuteredUnknown" 
+                               v-model="form.neutered" :value="null">
+                        <label class="form-check-label" for="neuteredUnknown">Unknown</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">HDB Approved</label>
+                  <div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" id="hdbApprovedYes" 
+                             v-model="form.hdb_approved" :value="true">
+                      <label class="form-check-label" for="hdbApprovedYes">Yes</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" id="hdbApprovedNo" 
+                             v-model="form.hdb_approved" :value="false">
+                      <label class="form-check-label" for="hdbApprovedNo">No</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Error Message -->
               <div v-if="error" class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
                 {{ error }}
               </div>
 
@@ -231,8 +357,6 @@
 </template>
 
 <script>
-const API_BASE_URL = 'http://localhost:3000/api';
-
 export default {
   name: 'AddAdoptionPage',
   data() {
@@ -245,12 +369,18 @@ export default {
         size: '',
         gender: '',
         personality: '',
+        background: '',
         activity_level: 'medium',
-        furColor: '',
+        fur_color: '',
         vaccination_status: 'Up to date',
         adoption_fee: 0,
         health_info: '',
-        location: 'Singapore'
+        location: 'Singapore',
+        good_with_children: null,
+        good_with_other_pets: null,
+        vaccinated: null,
+        neutered: null,
+        hdb_approved: false
       },
       uploadedImages: [],
       newImageUrl: '',
@@ -261,45 +391,61 @@ export default {
   },
   methods: {
     handleFileUpload(event) {
-      const files = event.target.files;
-      if (files.length > 5) {
-        this.error = 'Maximum 5 images allowed';
-        return;
-      }
+  const files = Array.from(event.target.files);
+  
+  console.log(`📁 Files selected: ${files.length}`);
+  
+  if (files.length + this.uploadedImages.length > 5) {
+    this.error = 'Maximum 5 images allowed';
+    return;
+  }
 
-      for (let file of files) {
-        if (file.size > 5 * 1024 * 1024) {
-          this.error = `File ${file.name} is too large. Maximum size is 5MB.`;
-          continue;
-        }
+  for (let file of files) {
+    console.log(`📄 Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+    
+    if (file.size > 5 * 1024 * 1024) {
+      this.error = `File ${file.name} is too large. Maximum size is 5MB.`;
+      continue;
+    }
 
-        if (!file.type.startsWith('image/')) {
-          this.error = `File ${file.name} is not an image.`;
-          continue;
-        }
+    if (!file.type.startsWith('image/')) {
+      this.error = `File ${file.name} is not an image.`;
+      continue;
+    }
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.uploadedImages.push({
-            file: file,
-            preview: e.target.result,
-            type: 'file'
-          });
-        };
-        reader.readAsDataURL(file);
-      }
+    // Create preview and store file
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      console.log(`🖼️ File loaded as preview: ${file.name}`);
+      this.uploadedImages.push({
+        file: file,
+        preview: e.target.result,
+        type: 'file'
+      });
+      console.log(`📊 Total uploaded images: ${this.uploadedImages.length}`);
+    };
+    reader.readAsDataURL(file);
+  }
 
-      // Reset file input
-      this.$refs.fileInput.value = '';
-    },
+  // Reset file input
+  this.$refs.fileInput.value = '';
+  this.error = null;
+},
 
     addImageUrl() {
       if (this.newImageUrl && this.uploadedImages.length < 5) {
-        this.uploadedImages.push({
-          url: this.newImageUrl,
-          type: 'url'
-        });
-        this.newImageUrl = '';
+        // Validate URL format
+        try {
+          new URL(this.newImageUrl);
+          this.uploadedImages.push({
+            url: this.newImageUrl,
+            type: 'url'
+          });
+          this.newImageUrl = '';
+          this.error = null;
+        } catch (e) {
+          this.error = 'Please enter a valid URL';
+        }
       } else if (this.uploadedImages.length >= 5) {
         this.error = 'Maximum 5 images allowed';
       }
@@ -309,71 +455,114 @@ export default {
       this.uploadedImages.splice(index, 1);
     },
 
-    async submitPet() {
-      if (this.uploadedImages.length === 0) {
-        this.error = 'Please add at least one image of the pet';
-        return;
-      }
+   async submitPet() {
+  if (this.uploadedImages.length === 0) {
+    this.error = 'Please add at least one image of the pet';
+    return;
+  }
 
-      this.loading = true;
-      this.error = null;
-      this.success = null;
+  this.loading = true;
+  this.error = null;
+  this.success = null;
+  
+  try {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      this.$router.push('/login');
+      return;
+    }
+
+    // Convert file images to base64 URLs
+    const imageUrls = [];
+    
+    console.log(`🖼️ Processing ${this.uploadedImages.length} uploaded images:`);
+    
+    for (const image of this.uploadedImages) {
+      if (image.type === 'file') {
+        console.log(`📁 Converting file: ${image.file.name}`);
+        // Convert file to base64
+        const base64Url = await this.fileToBase64(image.file);
+        imageUrls.push(base64Url);
+        console.log(`✅ Converted to base64, length: ${base64Url.length}`);
+      } else {
+        // Use URL directly
+        console.log(`🌐 Using URL: ${image.url}`);
+        imageUrls.push(image.url);
+      }
+    }
+
+    console.log(`🎯 Final image URLs to send: ${imageUrls.length}`);
+    console.log('📤 First image preview:', imageUrls[0]?.substring(0, 100) + '...');
+
+    // Prepare the data - map field names to match database
+    const submissionData = {
+      name: this.form.name,
+      type: this.form.type,
+      breed: this.form.breed,
+      age: this.form.age,
+      size: this.form.size,
+      gender: this.form.gender,
+      personality: this.form.personality,
+      background: this.form.background,
+      activity_level: this.form.activity_level,
+      fur_color: this.form.fur_color,
+      vaccination_status: this.form.vaccination_status,
+      adoption_fee: this.form.adoption_fee,
+      health_info: this.form.health_info,
+      location: this.form.location,
+      good_with_children: this.form.good_with_children,
+      good_with_other_pets: this.form.good_with_other_pets,
+      vaccinated: this.form.vaccinated,
+      neutered: this.form.neutered,
+      hdb_approved: this.form.hdb_approved,
+      images: imageUrls
+    };
+
+    console.log('📦 Submission data prepared, sending to backend...');
+
+    const response = await fetch('http://localhost:3000/api/pets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(submissionData)
+    });
+
+    console.log('📨 Response status:', response.status);
+
+    if (response.ok) {
+      const newPet = await response.json();
+      console.log('✅ Successfully created pet:', newPet);
+      console.log('📸 New pet images:', newPet.images);
+      console.log('🔢 Number of images in response:', newPet.images ? newPet.images.length : 0);
       
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          this.$router.push('/login');
-          return;
-        }
+      this.success = `Successfully added ${newPet.name} for adoption with ${this.uploadedImages.length} images!`;
+      this.resetForm();
+      
+      setTimeout(() => {
+        this.$router.push('/pets');
+      }, 2000);
+    } else {
+      const error = await response.json();
+      console.error('❌ Server error:', error);
+      this.error = error.error || `Failed to add pet for adoption (Status: ${response.status})`;
+    }
+  } catch (error) {
+    console.error('Error adding pet:', error);
+    this.error = 'Network error. Please try again.';
+  } finally {
+    this.loading = false;
+  }
+},
 
-        // Create FormData for file upload
-        const formData = new FormData();
-        
-        // Add pet data
-        formData.append('petData', JSON.stringify(this.form));
-        
-        // Add images
-        this.uploadedImages.forEach((image, index) => {
-          if (image.type === 'file') {
-            formData.append('images', image.file);
-          } else {
-            formData.append('imageUrls', image.url);
-          }
-        });
-
-        console.log('Submitting pet data with images:', this.uploadedImages.length);
-
-        const response = await fetch(`${API_BASE_URL}/pets`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-            // Don't set Content-Type - let browser set it with boundary
-          },
-          body: formData
-        });
-
-        console.log('Response status:', response.status);
-
-        if (response.ok) {
-          const newPet = await response.json();
-          console.log('Successfully created pet:', newPet);
-          this.success = `Successfully added ${newPet.name} for adoption with ${this.uploadedImages.length} images!`;
-          this.resetForm();
-          
-          setTimeout(() => {
-            this.$router.push('/pets');
-          }, 2000);
-        } else {
-          const error = await response.json();
-          console.error('Server error:', error);
-          this.error = error.error || `Failed to add pet for adoption (Status: ${response.status})`;
-        }
-      } catch (error) {
-        console.error('Error adding pet:', error);
-        this.error = 'Network error. Please try again.';
-      } finally {
-        this.loading = false;
-      }
+    fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
     },
     
     resetForm() {
@@ -385,12 +574,18 @@ export default {
         size: '',
         gender: '',
         personality: '',
+        background: '',
         activity_level: 'medium',
-        furColor: '',
+        fur_color: '',
         vaccination_status: 'Up to date',
         adoption_fee: 0,
         health_info: '',
-        location: 'Singapore'
+        location: 'Singapore',
+        good_with_children: null,
+        good_with_other_pets: null,
+        vaccinated: null,
+        neutered: null,
+        hdb_approved: false
       };
       this.uploadedImages = [];
       this.newImageUrl = '';
@@ -457,13 +652,21 @@ export default {
   border: 1px solid var(--border-light);
   border-radius: 8px;
   overflow: hidden;
-}
-
-.image-preview-card img {
   transition: transform 0.3s ease;
 }
 
-.image-preview-card:hover img {
-  transform: scale(1.05);
+.image-preview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.image-info {
+  background: rgba(0,0,0,0.05);
+  font-size: 0.75rem;
+}
+
+.form-check-input:checked {
+  background-color: var(--primary-pink);
+  border-color: var(--primary-pink);
 }
 </style>

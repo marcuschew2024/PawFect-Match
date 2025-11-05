@@ -83,6 +83,7 @@
               <li><router-link to="/about">About Us</router-link></li>
               <li><router-link to="/pets">Pet Listing</router-link></li>
               <li><router-link to="/add-pet">List a Pet</router-link></li>
+              <li><router-link to="/community">Community</router-link></li>
             </ul>
           </div>
 

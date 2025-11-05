@@ -3,14 +3,12 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="mb-0">Find Your Pawfect Match</h1>
       <div v-if="isAuthenticated" class="d-flex gap-2">
-        <!-- Only show favorites button if quiz is completed -->
         <router-link v-if="hasCompletedQuiz" to="/favorites" class="btn btn-outline-primary">
           <i class="bi bi-heart me-2"></i>View Favorites
         </router-link>
       </div>
     </div>
 
-    <!-- Quiz Prompt for Authenticated Users - FIXED -->
     <div v-if="isAuthenticated && !hasCompletedQuiz && !loading" class="alert alert-info">
       <div class="d-flex justify-content-between align-items-center">
         <div>
@@ -23,17 +21,14 @@
       </div>
     </div>
 
-    <!-- Enhanced Filter Section -->
     <div class="filter-section">
       <div class="row g-3 align-items-end">
-        <!-- Search Input -->
         <div class="col-lg-3 col-md-6">
           <label for="searchInput" class="form-label">SEARCH PETS</label>
           <input type="text" class="form-control" id="searchInput" v-model="searchTerm"
             placeholder="Name, breed, or personality..." autocomplete="off">
         </div>
 
-        <!-- Type Filter -->
         <div class="col-lg-2 col-md-4 col-sm-6">
           <label for="typeFilter" class="form-label">TYPE</label>
           <select class="form-select" id="typeFilter" v-model="filters.type">
@@ -43,7 +38,6 @@
           </select>
         </div>
 
-        <!-- Size Filter -->
         <div class="col-lg-2 col-md-4 col-sm-6">
           <label for="sizeFilter" class="form-label">SIZE</label>
           <select class="form-select" id="sizeFilter" v-model="filters.size">
@@ -54,7 +48,6 @@
           </select>
         </div>
 
-        <!-- Compatibility Filter -->
         <div v-if="hasCompletedQuiz" class="col-lg-2 col-md-4 col-sm-6">
           <label for="compatibilityFilter" class="form-label">MIN SCORE</label>
           <select class="form-select" id="compatibilityFilter" v-model="filters.minScore">
@@ -65,7 +58,6 @@
           </select>
         </div>
 
-        <!-- Action Buttons -->
         <div class="col-lg-3 col-md-6">
           <div class="d-flex gap-2">
             <button class="btn btn-pink flex-fill" @click="applyFilters">
@@ -79,7 +71,6 @@
       </div>
     </div>
 
-    <!-- Pets Grid -->
     <div class="row mt-4">
       <div v-if="loading" class="col-12">
         <div class="loading-text">
@@ -112,18 +103,15 @@
               :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
               loading="lazy">
 
-            <!-- Compatibility Score Badge -->
             <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-badge">
               {{ pet.compatibility_score }}% Match
             </div>
 
-            <!-- Favorite Button -->
             <button v-if="isAuthenticated" class="favorite-btn" @click="toggleFavorite(pet)"
               :class="{ 'favorited': pet.is_favorite }">
               <i class="bi" :class="pet.is_favorite ? 'bi-heart-fill' : 'bi-heart'"></i>
             </button>
 
-            <!-- Image Source Badge -->
             <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
               AI Generated Image
             </div>
@@ -139,7 +127,6 @@
           <div class="card-body d-flex flex-column">
             <h5 class="card-title">{{ pet.name }}</h5>
 
-            <!-- Compatibility Meter -->
             <div v-if="hasCompletedQuiz && pet.compatibility_score" class="compatibility-meter mb-3">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <small class="text-muted">Compatibility</small>
@@ -167,49 +154,19 @@
 
           <div class="card-footer bg-transparent">
             <div class="d-grid gap-2">
-              <!-- View More Button -->
               <button class="btn view-more-btn" @click="$router.push(`/pet/${pet.id}`)">
                 <i class="bi me-1"></i>View More
               </button>
-
-              <!-- Adoption Button -->
-              <!-- <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-success" @click="startAdoption(pet)">
-                <i class="bi bi-heart me-1"></i>Adopt {{ pet.name }}
-              </button>
-
-              <button v-else-if="!isAuthenticated" class="btn btn-outline-success" @click="$router.push('/login')">
-                <i class="bi bi-person me-1"></i>Login to Adopt
-              </button>
-
-              <button v-else-if="pet.is_adopted" class="btn btn-secondary" disabled>
-                <i class="bi bi-check-circle me-1"></i>Already Adopted
-              </button> -->
-
-              <!-- Favorite Buttons -->
-              <!-- <button v-if="isAuthenticated && !pet.is_favorite" class="btn btn-outline-primary btn-sm"
-                @click="toggleFavorite(pet)">
-                <i class="bi bi-heart me-1"></i>Add to Favorites
-              </button>
-              <button v-else-if="isAuthenticated && pet.is_favorite" class="btn btn-outline-danger btn-sm"
-                @click="toggleFavorite(pet)">
-                <i class="bi bi-heart-fill me-1"></i>Remove Favorite
-              </button> -->
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Pet Detail Modal -->
-    <PetDetailModal ref="petDetailModal" :pet="selectedPet" :isAuthenticated="isAuthenticated"
-      :hasCompletedQuiz="hasCompletedQuiz" @start-adoption="startAdoption" />
   </div>
 </template>
 
 <script>
 const API_BASE_URL = 'http://localhost:3000/api';
-
-// Import the modal component
 import PetDetailModal from '@/components/PetDetailModal.vue';
 
 export default {
@@ -235,7 +192,7 @@ export default {
       isAuthenticated: false,
       hasCompletedQuiz: false,
       userProfile: null,
-      selectedPet: null  // Track selected pet for modal
+      selectedPet: null
     }
   },
   async mounted() {
@@ -248,131 +205,157 @@ export default {
       this.isAuthenticated = !!token;
     },
 
-
     async initializePage() {
       this.checkAuth();
       await this.loadAllBreeds();
 
-      // Check if user has completed quiz
       if (this.isAuthenticated) {
         await this.checkQuizCompletion();
       }
 
-      // After breed is loaded and quiz is checked, get the pets
       await this.fetchPets();
     },
 
     async checkQuizCompletion() {
-      try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_BASE_URL}/user/quiz`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          this.userProfile = await response.json();
-          this.hasCompletedQuiz = true;
-          console.log("Has completed quiz:", this.hasCompletedQuiz);
-          console.log(this.userProfile);
-        }
-      } catch (error) {
-        console.log('No quiz results found');
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE_URL}/user/quiz`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.has_completed_quiz) {
+        this.userProfile = data.profile;
+        this.hasCompletedQuiz = true;
+        return true;
+      } else {
+        this.hasCompletedQuiz = false;
+        return false;
+      }
+    } else {
+      this.hasCompletedQuiz = false;
+      return false;
+    }
+  } catch (error) {
+    console.log('Error checking quiz completion:', error.message);
+    this.hasCompletedQuiz = false;
+    return false;
+  }
+},
 
     async fetchPets() {
-      this.loading = true;
-      this.error = null;
+  this.loading = true;
+  this.error = null;
 
-      try {
-        const token = localStorage.getItem('authToken');
-        let url = `${API_BASE_URL}/pets`;
+  try {
+    const token = localStorage.getItem('authToken');
+    let url = `${API_BASE_URL}/pets`;
 
-        // Use the enhanced endpoint if user has completed quiz
-        if (this.isAuthenticated && this.hasCompletedQuiz) {
-          url = `${API_BASE_URL}/pets/with-scores`;
-        }
+    // Only try to fetch with scores if user has completed quiz
+    if (this.isAuthenticated && this.hasCompletedQuiz) {
+      url = `${API_BASE_URL}/pets/with-scores`;
+    }
 
-        const headers = {
-          'Content-Type': 'application/json'
-        };
+    const headers = {
+      'Content-Type': 'application/json'
+    };
 
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
-        console.log('🔄 Fetching pets from:', url);
-        const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        let data = await response.json();
-        console.log('📦 Raw pets data:', data);
-
-        // Log image information for each pet
-        data.forEach(pet => {
-          console.log(`🐕 ${pet.name}:`, {
-            hasImage: !!(pet.image && pet.image.trim()),
-            image: pet.image,
-            type: pet.type,
-            breed: pet.breed
-          });
-        });
-
-        // Process pets data
-        this.pets = await this.processPetsWithImages(data);
-        this.filteredPets = [...this.pets];
-
-        console.log('✅ Processed pets:', this.pets);
-
-      } catch (error) {
-        console.error('Error fetching pets:', error);
-        this.error = error.message;
-      } finally {
-        this.loading = false;
+    if (!response.ok) {
+      // If with-scores fails, fall back to regular pets endpoint
+      if (response.status === 404 || response.status === 400) {
+        console.log('Quiz data not found, falling back to regular pets endpoint');
+        this.hasCompletedQuiz = false;
+        return await this.fetchRegularPets();
       }
-    },
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    let data = await response.json();
+    this.pets = await this.processPetsWithImages(data);
+    this.filteredPets = [...this.pets];
+
+  } catch (error) {
+    console.error('Error fetching pets:', error);
+    
+    // If error is related to quiz data, fall back to regular pets
+    if (error.message.includes('404') || error.message.includes('400')) {
+      console.log('Falling back to regular pets endpoint');
+      this.hasCompletedQuiz = false;
+      await this.fetchRegularPets();
+    } else {
+      this.error = error.message;
+    }
+  } finally {
+    this.loading = false;
+  }
+},
+
+// Helper method to fetch regular pets
+async fetchRegularPets() {
+  try {
+    const token = localStorage.getItem('authToken');
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/pets`, { headers });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    let data = await response.json();
+    this.pets = await this.processPetsWithImages(data);
+    this.filteredPets = [...this.pets];
+  } catch (error) {
+    this.error = error.message;
+  }
+},
 
     async processPetsWithImages(pets) {
       const processedPets = pets.map(pet => {
-        // Check if pet has a valid image in database
-        const hasValidDatabaseImage = pet.image && pet.image.trim() !== '' && !pet.image.includes('placeholder');
-
-        if (hasValidDatabaseImage) {
-          console.log(`✓ Using database image for ${pet.name}:`, pet.image);
-          return {
-            ...pet,
-            displayImage: pet.image,
-            imageLoaded: false,
-            placeholderImage: false,
-            imageSource: 'database'
-          };
+        let displayImage = null;
+        let imageSource = 'placeholder';
+        
+        if (pet.main_image && pet.main_image.trim() !== '') {
+          displayImage = pet.main_image;
+          imageSource = 'database';
+        } else if (pet.image && pet.image.trim() !== '') {
+          displayImage = pet.image;
+          imageSource = 'database';
         } else {
-          console.log(`⚠ No valid database image for ${pet.name}, using placeholder`);
-          return {
-            ...pet,
-            displayImage: this.getColoredPlaceholder(pet),
-            imageLoaded: false,
-            placeholderImage: true,
-            imageSource: 'placeholder'
-          };
+          displayImage = this.getColoredPlaceholder(pet);
+          imageSource = 'placeholder';
         }
+
+        return {
+          ...pet,
+          displayImage: displayImage,
+          imageLoaded: false,
+          placeholderImage: imageSource === 'placeholder',
+          imageSource: imageSource
+        };
       });
 
-      // Try to fetch better images for pets with placeholders
       this.fetchApiImagesForPets(processedPets);
       return processedPets;
     },
 
     async fetchApiImagesForPets(pets) {
-      // Only fetch API images for pets that have placeholders
       const petsNeedingImages = pets.filter(pet => pet.placeholderImage && pet.imageSource === 'placeholder');
-
-      console.log(`🖼 Fetching API images for ${petsNeedingImages.length} pets`);
 
       const batchSize = 3;
 
@@ -382,17 +365,13 @@ export default {
           try {
             const apiImage = await this.fetchPetImage(pet);
             if (apiImage) {
-              console.log(`✅ Found API image for ${pet.name}:`, apiImage);
               pet.displayImage = apiImage;
-              pet.image = apiImage; // Also update the main image field
+              pet.image = apiImage;
               pet.placeholderImage = false;
               pet.imageSource = 'api';
 
-              // Update reactivity
               this.pets = [...this.pets];
               this.filteredPets = [...this.filteredPets];
-            } else {
-              console.log(`❌ No API image found for ${pet.name}`);
             }
           } catch (error) {
             console.error(`Failed to fetch API image for ${pet.name}:`, error);
@@ -401,7 +380,6 @@ export default {
 
         await Promise.allSettled(promises);
 
-        // Small delay between batches to avoid rate limiting
         if (i + batchSize < petsNeedingImages.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
@@ -446,27 +424,17 @@ export default {
 
     onImageLoad(pet) {
       pet.imageLoaded = true;
-      console.log(`✅ Image loaded successfully for ${pet.name} from ${pet.imageSource}`);
     },
 
     onImageError(pet) {
-      console.log(`🖼 Image load error for ${pet.name}:`, pet.displayImage);
-
-      // If database image fails, try API image
       if (pet.imageSource === 'database') {
-        console.log(`🔄 Database image failed, trying API for ${pet.name}`);
         pet.placeholderImage = true;
         pet.imageSource = 'placeholder';
         this.fetchApiImageForSinglePet(pet);
-      }
-      // If API image fails, use colored placeholder
-      else if (pet.imageSource === 'api') {
-        console.log(`🔄 API image failed, using placeholder for ${pet.name}`);
+      } else if (pet.imageSource === 'api') {
         pet.displayImage = this.getColoredPlaceholder(pet);
         pet.placeholderImage = false;
-      }
-      // If already using placeholder, just mark as loaded
-      else {
+      } else {
         pet.displayImage = this.getColoredPlaceholder(pet);
         pet.placeholderImage = false;
       }
@@ -474,7 +442,6 @@ export default {
       pet.imageLoaded = true;
     },
 
-    // Helper method to fetch API image for single pet
     async fetchApiImageForSinglePet(pet) {
       try {
         const apiImage = await this.fetchPetImage(pet);
@@ -484,7 +451,6 @@ export default {
           pet.placeholderImage = false;
           pet.imageSource = 'api';
 
-          // Update reactivity
           this.pets = [...this.pets];
           this.filteredPets = [...this.filteredPets];
         } else {
@@ -508,7 +474,6 @@ export default {
         const token = localStorage.getItem('authToken');
 
         if (pet.is_favorite) {
-          // Remove from favorites
           await fetch(`${API_BASE_URL}/user/favorites/${pet.id}`, {
             method: 'DELETE',
             headers: {
@@ -517,7 +482,6 @@ export default {
           });
           pet.is_favorite = false;
         } else {
-          // Add to favorites
           await fetch(`${API_BASE_URL}/user/favorites`, {
             method: 'POST',
             headers: {
@@ -529,7 +493,6 @@ export default {
           pet.is_favorite = true;
         }
 
-        // Update the array to trigger reactivity
         this.pets = [...this.pets];
         this.filteredPets = [...this.filteredPets];
 
@@ -579,46 +542,37 @@ export default {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
 
       if (!breeds.length) {
-        console.log(`No breeds loaded for ${type}`);
         return null;
       }
 
       const normalizedBreedName = breedName.toLowerCase().trim();
-      console.log(`Searching for breed: "${breedName}" (${type})`);
 
-      // Exact match
       let breed = breeds.find(b =>
         b.name.toLowerCase().trim() === normalizedBreedName
       );
 
       if (breed) {
-        console.log(`EXACT: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      // API breed name contains specified breed
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
         return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 4;
       });
 
       if (breed) {
-        console.log(` API contains DB: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      // Specified breed contains API name
       breed = breeds.find(b => {
         const apiName = b.name.toLowerCase().trim();
         return normalizedBreedName.includes(apiName) && apiName.length >= 4;
       });
 
       if (breed) {
-        console.log(`✓ DB contains API: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      // Word-by-word match
       const breedWords = normalizedBreedName.split(/\s+/);
       breed = breeds.find(b => {
         const apiWords = b.name.toLowerCase().trim().split(/\s+/);
@@ -628,12 +582,9 @@ export default {
       });
 
       if (breed) {
-        console.log(` Word match: "${breedName}" → "${breed.name}"`);
         return breed.id;
       }
 
-      console.log(` NO MATCH for "${breedName}"`);
-      console.log(`   Try one of these: ${breeds.slice(0, 5).map(b => b.name).join(', ')}...`);
       return null;
     },
 
@@ -650,20 +601,14 @@ export default {
 
         if (dogResponse.ok) {
           this.allDogBreeds = await dogResponse.json();
-          console.log(`✓ Loaded ${this.allDogBreeds.length} dog breeds`);
-        } else {
-          console.error('❌ Dog breeds failed:', dogResponse.status);
         }
 
         if (catResponse.ok) {
           this.allCatBreeds = await catResponse.json();
-          console.log(`✓ Loaded ${this.allCatBreeds.length} cat breeds`);
-        } else {
-          console.error('❌ Cat breeds failed:', catResponse.status);
         }
 
       } catch (error) {
-        console.error("❌ Error fetching breed lists:", error);
+        console.error("Error fetching breed lists:", error);
       }
     },
 
@@ -855,25 +800,6 @@ export default {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
   background: linear-gradient(135deg, #eb7e7e 0%, #FF9A9E 100%);
-  color: white;
-}
-
-.btn-success {
-  background: linear-gradient(135deg, #4ECDC4, #6EE7E7);
-  border-color: #4ECDC4;
-  color: white;
-  font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  width: 100%;
-}
-
-.btn-success:hover {
-  background: linear-gradient(135deg, #1e8b81, #3cb7b0);
-  border-color: #1e8b81;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(78, 205, 196, 0.4);
   color: white;
 }
 
