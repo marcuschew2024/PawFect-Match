@@ -120,9 +120,7 @@
             <div v-if="activeTab === 'adoptions'" class="tab-content">
               <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3>My Adoptions</h3>
-                <button @click="debugAdoptions" class="btn btn-outline-info btn-sm">
-                  <i class="bi bi-bug me-1"></i>Debug
-                </button>
+                
               </div>
               
               <div v-if="adoptionsLoading" class="text-center">

@@ -48,7 +48,12 @@
                       placeholder="Create a password"
                       minlength="6"
                     >
-                    <div class="form-text">Password must be at least 6 characters long.</div>
+                    <div class="password-requirements">
+                      <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Password must be at least <strong>6 characters</strong> long.
+                      </small>
+                    </div>
                   </div>
                 </div>
                 
@@ -170,5 +175,53 @@ export default {
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(255, 182, 193, 0.15);
   border: 1px solid var(--border-light);
+}
+
+.auth-form .form-label {
+  color: var(--text-dark);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.auth-form .form-control {
+  border: 2px solid var(--border-light);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.auth-form .form-control:focus {
+  border-color: var(--primary-pink);
+  box-shadow: 0 0 0 3px rgba(255, 182, 193, 0.2);
+}
+
+.auth-link {
+  color: var(--primary-pink-dark);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-link:hover {
+  color: var(--primary-pink);
+  text-decoration: underline;
+}
+
+.password-requirements {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid var(--primary-pink);
+}
+
+.password-requirements small {
+  font-size: 0.85rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .auth-card {
+    padding: 2rem 1.5rem;
+  }
 }
 </style>
