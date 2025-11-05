@@ -35,13 +35,30 @@
                   <div class="col-md-6 mb-3">
                     <label for="petBreed" class="form-label">Breed *</label>
                     <input type="text" class="form-control" id="petBreed" 
-                           v-model="form.breed" required>
+                           v-model="form.breed" 
+                           @blur="formatBreed"
+                           required>
                   </div>
                   
                   <div class="col-md-6 mb-3">
-                    <label for="petAge" class="form-label">Age *</label>
-                    <input type="text" class="form-control" id="petAge" 
-                           v-model="form.age" required placeholder="e.g., 2 years, 6 months">
+                    <label class="form-label">Age *</label>
+                    <div class="row">
+                      <div class="col-6">
+                        <select class="form-select" v-model="form.ageYears" required>
+                          <option value="">Years</option>
+                          <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <select class="form-select" v-model="form.ageMonths" required>
+                          <option value="">Months</option>
+                          <option v-for="month in months" :key="month" :value="month">{{ month }}</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-text" v-if="form.ageYears || form.ageMonths">
+                      Selected: {{ formatAgeDisplay() }}
+                    </div>
                   </div>
                 </div>
 
@@ -86,27 +103,6 @@
                   >
                   <div class="form-text">Select multiple images (PNG, JPG, JPEG). Maximum 5 images, 5MB each.</div>
                 </div>
-
-                <!-- URL Upload -->
-                <!-- <div class="mb-3">
-                  <label for="imageUrls" class="form-label">Or Add Image URLs</label>
-                  <div class="input-group mb-2">
-                    <input 
-                      type="url" 
-                      class="form-control" 
-                      v-model="newImageUrl" 
-                      placeholder="https://example.com/pet-image.jpg"
-                    >
-                    <button 
-                      type="button" 
-                      class="btn btn-outline-secondary" 
-                      @click="addImageUrl"
-                      :disabled="!newImageUrl || uploadedImages.length >= 5"
-                    >
-                      Add URL
-                    </button>
-                  </div>
-                </div> -->
 
                 <!-- Image Previews -->
                 <div v-if="uploadedImages.length > 0" class="image-previews mt-4">
@@ -215,7 +211,7 @@
 
                 <div class="mb-3">
                   <label for="petLocation" class="form-label">Location</label>
-                  <input type="text" class="form-control" id="petLocation" 
+                    <input type="text" class="form-control" id="petLocation" 
                          v-model="form.location" placeholder="e.g., Singapore, Central Area">
                 </div>
               </div>
@@ -365,7 +361,8 @@ export default {
         name: '',
         type: '',
         breed: '',
-        age: '',
+        ageYears: '',
+        ageMonths: '',
         size: '',
         gender: '',
         personality: '',
@@ -382,6 +379,8 @@ export default {
         neutered: null,
         hdb_approved: false
       },
+      years: Array.from({length: 21}, (_, i) => i), // 0 to 20 years
+      months: Array.from({length: 12}, (_, i) => i), // 0 to 11 months
       uploadedImages: [],
       newImageUrl: '',
       loading: false,
@@ -390,47 +389,71 @@ export default {
     }
   },
   methods: {
+    // Format breed to First Letter Capital, rest lowercase
+    formatBreed() {
+      if (this.form.breed) {
+        // Split by spaces to handle multiple words (e.g., "golden retriever")
+        const words = this.form.breed.trim().split(/\s+/);
+        const formattedWords = words.map(word => {
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        });
+        this.form.breed = formattedWords.join(' ');
+      }
+    },
+
+    // Format age display for preview
+    formatAgeDisplay() {
+      const parts = [];
+      if (this.form.ageYears > 0) {
+        parts.push(`${this.form.ageYears} year${this.form.ageYears > 1 ? 's' : ''}`);
+      }
+      if (this.form.ageMonths > 0) {
+        parts.push(`${this.form.ageMonths} month${this.form.ageMonths > 1 ? 's' : ''}`);
+      }
+      return parts.join(' and ') || 'Please select age';
+    },
+
     handleFileUpload(event) {
-  const files = Array.from(event.target.files);
-  
-  console.log(`📁 Files selected: ${files.length}`);
-  
-  if (files.length + this.uploadedImages.length > 5) {
-    this.error = 'Maximum 5 images allowed';
-    return;
-  }
+      const files = Array.from(event.target.files);
+      
+      console.log(`📁 Files selected: ${files.length}`);
+      
+      if (files.length + this.uploadedImages.length > 5) {
+        this.error = 'Maximum 5 images allowed';
+        return;
+      }
 
-  for (let file of files) {
-    console.log(`📄 Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
-    
-    if (file.size > 5 * 1024 * 1024) {
-      this.error = `File ${file.name} is too large. Maximum size is 5MB.`;
-      continue;
-    }
+      for (let file of files) {
+        console.log(`📄 Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+        
+        if (file.size > 5 * 1024 * 1024) {
+          this.error = `File ${file.name} is too large. Maximum size is 5MB.`;
+          continue;
+        }
 
-    if (!file.type.startsWith('image/')) {
-      this.error = `File ${file.name} is not an image.`;
-      continue;
-    }
+        if (!file.type.startsWith('image/')) {
+          this.error = `File ${file.name} is not an image.`;
+          continue;
+        }
 
-    // Create preview and store file
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      console.log(`🖼️ File loaded as preview: ${file.name}`);
-      this.uploadedImages.push({
-        file: file,
-        preview: e.target.result,
-        type: 'file'
-      });
-      console.log(`📊 Total uploaded images: ${this.uploadedImages.length}`);
-    };
-    reader.readAsDataURL(file);
-  }
+        // Create preview and store file
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          console.log(`🖼️ File loaded as preview: ${file.name}`);
+          this.uploadedImages.push({
+            file: file,
+            preview: e.target.result,
+            type: 'file'
+          });
+          console.log(`📊 Total uploaded images: ${this.uploadedImages.length}`);
+        };
+        reader.readAsDataURL(file);
+      }
 
-  // Reset file input
-  this.$refs.fileInput.value = '';
-  this.error = null;
-},
+      // Reset file input
+      this.$refs.fileInput.value = '';
+      this.error = null;
+    },
 
     addImageUrl() {
       if (this.newImageUrl && this.uploadedImages.length < 5) {
@@ -455,106 +478,120 @@ export default {
       this.uploadedImages.splice(index, 1);
     },
 
-   async submitPet() {
-  if (this.uploadedImages.length === 0) {
-    this.error = 'Please add at least one image of the pet';
-    return;
-  }
-
-  this.loading = true;
-  this.error = null;
-  this.success = null;
-  
-  try {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      this.$router.push('/login');
-      return;
-    }
-
-    // Convert file images to base64 URLs
-    const imageUrls = [];
-    
-    console.log(`🖼️ Processing ${this.uploadedImages.length} uploaded images:`);
-    
-    for (const image of this.uploadedImages) {
-      if (image.type === 'file') {
-        console.log(`📁 Converting file: ${image.file.name}`);
-        // Convert file to base64
-        const base64Url = await this.fileToBase64(image.file);
-        imageUrls.push(base64Url);
-        console.log(`✅ Converted to base64, length: ${base64Url.length}`);
-      } else {
-        // Use URL directly
-        console.log(`🌐 Using URL: ${image.url}`);
-        imageUrls.push(image.url);
+    async submitPet() {
+      // Validate age selection
+      if (!this.form.ageYears && !this.form.ageMonths) {
+        this.error = 'Please select both years and months for age';
+        return;
       }
-    }
 
-    console.log(`🎯 Final image URLs to send: ${imageUrls.length}`);
-    console.log('📤 First image preview:', imageUrls[0]?.substring(0, 100) + '...');
+      if (this.uploadedImages.length === 0) {
+        this.error = 'Please add at least one image of the pet';
+        return;
+      }
 
-    // Prepare the data - map field names to match database
-    const submissionData = {
-      name: this.form.name,
-      type: this.form.type,
-      breed: this.form.breed,
-      age: this.form.age,
-      size: this.form.size,
-      gender: this.form.gender,
-      personality: this.form.personality,
-      background: this.form.background,
-      activity_level: this.form.activity_level,
-      fur_color: this.form.fur_color,
-      vaccination_status: this.form.vaccination_status,
-      adoption_fee: this.form.adoption_fee,
-      health_info: this.form.health_info,
-      location: this.form.location,
-      good_with_children: this.form.good_with_children,
-      good_with_other_pets: this.form.good_with_other_pets,
-      vaccinated: this.form.vaccinated,
-      neutered: this.form.neutered,
-      hdb_approved: this.form.hdb_approved,
-      images: imageUrls
-    };
-
-    console.log('📦 Submission data prepared, sending to backend...');
-
-    const response = await fetch('http://localhost:3000/api/pets', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(submissionData)
-    });
-
-    console.log('📨 Response status:', response.status);
-
-    if (response.ok) {
-      const newPet = await response.json();
-      console.log('✅ Successfully created pet:', newPet);
-      console.log('📸 New pet images:', newPet.images);
-      console.log('🔢 Number of images in response:', newPet.images ? newPet.images.length : 0);
+      this.loading = true;
+      this.error = null;
+      this.success = null;
       
-      this.success = `Successfully added ${newPet.name} for adoption with ${this.uploadedImages.length} images!`;
-      this.resetForm();
-      
-      setTimeout(() => {
-        this.$router.push('/pets');
-      }, 2000);
-    } else {
-      const error = await response.json();
-      console.error('❌ Server error:', error);
-      this.error = error.error || `Failed to add pet for adoption (Status: ${response.status})`;
-    }
-  } catch (error) {
-    console.error('Error adding pet:', error);
-    this.error = 'Network error. Please try again.';
-  } finally {
-    this.loading = false;
-  }
-},
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          this.$router.push('/login');
+          return;
+        }
+
+        // Auto-format breed before submission
+        this.formatBreed();
+
+        // Convert age to string format
+        const ageString = this.formatAgeDisplay();
+
+        // Convert file images to base64 URLs
+        const imageUrls = [];
+        
+        console.log(`🖼️ Processing ${this.uploadedImages.length} uploaded images:`);
+        
+        for (const image of this.uploadedImages) {
+          if (image.type === 'file') {
+            console.log(`📁 Converting file: ${image.file.name}`);
+            // Convert file to base64
+            const base64Url = await this.fileToBase64(image.file);
+            imageUrls.push(base64Url);
+            console.log(`✅ Converted to base64, length: ${base64Url.length}`);
+          } else {
+            // Use URL directly
+            console.log(`🌐 Using URL: ${image.url}`);
+            imageUrls.push(image.url);
+          }
+        }
+
+        console.log(`🎯 Final image URLs to send: ${imageUrls.length}`);
+        console.log('📤 First image preview:', imageUrls[0]?.substring(0, 100) + '...');
+
+        // Prepare the data - map field names to match database
+        const submissionData = {
+          name: this.form.name,
+          type: this.form.type,
+          breed: this.form.breed,
+          age: ageString, // Use formatted age string
+          size: this.form.size,
+          gender: this.form.gender,
+          personality: this.form.personality,
+          background: this.form.background,
+          activity_level: this.form.activity_level,
+          fur_color: this.form.fur_color,
+          vaccination_status: this.form.vaccination_status,
+          adoption_fee: this.form.adoption_fee,
+          health_info: this.form.health_info,
+          location: this.form.location,
+          good_with_children: this.form.good_with_children,
+          good_with_other_pets: this.form.good_with_other_pets,
+          vaccinated: this.form.vaccinated,
+          neutered: this.form.neutered,
+          hdb_approved: this.form.hdb_approved,
+          images: imageUrls
+        };
+
+        console.log('📦 Submission data prepared, sending to backend...');
+        console.log('🐕 Breed:', submissionData.breed);
+        console.log('📅 Age:', submissionData.age);
+
+        const response = await fetch('http://localhost:3000/api/pets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(submissionData)
+        });
+
+        console.log('📨 Response status:', response.status);
+
+        if (response.ok) {
+          const newPet = await response.json();
+          console.log('✅ Successfully created pet:', newPet);
+          console.log('📸 New pet images:', newPet.images);
+          console.log('🔢 Number of images in response:', newPet.images ? newPet.images.length : 0);
+          
+          this.success = `Successfully added ${newPet.name} for adoption with ${this.uploadedImages.length} images!`;
+          this.resetForm();
+          
+          setTimeout(() => {
+            this.$router.push('/pets');
+          }, 2000);
+        } else {
+          const error = await response.json();
+          console.error('❌ Server error:', error);
+          this.error = error.error || `Failed to add pet for adoption (Status: ${response.status})`;
+        }
+      } catch (error) {
+        console.error('Error adding pet:', error);
+        this.error = 'Network error. Please try again.';
+      } finally {
+        this.loading = false;
+      }
+    },
 
     fileToBase64(file) {
       return new Promise((resolve, reject) => {
@@ -570,7 +607,8 @@ export default {
         name: '',
         type: '',
         breed: '',
-        age: '',
+        ageYears: '',
+        ageMonths: '',
         size: '',
         gender: '',
         personality: '',

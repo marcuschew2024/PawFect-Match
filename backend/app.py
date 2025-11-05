@@ -784,7 +784,7 @@ def adopt_pet(current_user, pet_id):
 #         print(f"Error creating adoption application: {str(e)}")
 #         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/user/adoptions', methods=['GET'])
+@app.route('/adoptions', methods=['GET'])
 @token_required
 def get_user_adoptions(current_user):
     try:
@@ -911,6 +911,7 @@ def get_user_profile(current_user):
 def save_quiz_results(current_user):
     try:
         data = request.get_json()
+        print(f"📝 Received quiz data: {data}")
         
         # Validate required fields
         required_fields = ['living_space', 'activity_level', 'preferred_pet_type', 'has_allergies']
@@ -918,22 +919,32 @@ def save_quiz_results(current_user):
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
         
-        # Save or update user profile with quiz results
+        # Map frontend field names to database field names with proper value mapping
         profile_data = {
             'user_id': current_user,
             'living_space': data['living_space'],
             'activity_level': data['activity_level'],
-            'preferred_pet_type': data['preferred_pet_type'],
+            'preferred_pet_type': data['preferred_pet_type'],  # Note: Database expects 'both' not 'both'
             'has_allergies': data['has_allergies'],
             'allergies': data.get('allergies', ''),
-            'experience_level': data.get('experience_level', 'first_time'),
-            'home_environment': data.get('home_environment', 'quiet'),
+            # Map pet_experience to experience_level with exact database values
+            'experience_level': map_experience_level(data.get('pet_experience', 'none')),
+            # Map home_environment to database values
+            'home_environment': map_home_environment(data.get('home_environment', 'quiet')),
             'has_children': data.get('has_children', False),
             'children_ages': data.get('children_ages', ''),
-            'has_other_pets': data.get('has_other_pets', False),
-            'other_pets_details': data.get('other_pets_details', ''),
-            'time_commitment': data.get('time_commitment', 'medium')
+            'has_other_pets': data.get('has_pets', False),
+            'other_pets_details': data.get('pets_details', ''),
+            # Map hours_alone to time_commitment with value conversion
+            'time_commitment': map_time_commitment(data.get('hours_alone', '4-8'))
         }
+        
+        print(f"🗃️ Mapped profile data: {profile_data}")
+        
+        # Validate and ensure values match database constraints
+        profile_data = validate_profile_data(profile_data)
+        
+        print(f"✅ Validated profile data: {profile_data}")
         
         # Check if profile exists
         existing_profile = supabase.table('user_profiles').select('*').eq('user_id', current_user).execute()
@@ -941,17 +952,75 @@ def save_quiz_results(current_user):
         if existing_profile.data:
             # Update existing profile
             response = supabase.table('user_profiles').update(profile_data).eq('user_id', current_user).execute()
+            print(f"📝 Updated existing profile: {response.data}")
         else:
             # Create new profile
             response = supabase.table('user_profiles').insert(profile_data).execute()
+            print(f"🆕 Created new profile: {response.data}")
         
-        return jsonify({
-            'message': 'Quiz results saved successfully',
-            'profile': response.data[0] if response.data else None
-        }), 200
+        if response.data:
+            return jsonify({
+                'message': 'Quiz results saved successfully',
+                'profile': response.data[0]
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to save quiz results'}), 400
             
     except Exception as e:
+        print(f"❌ Error saving quiz: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# Helper functions for value mapping
+# Update the map_experience_level function with exact database values
+# Update all mapping functions with exact database constraints
+def map_experience_level(frontend_value):
+    """Map frontend experience values to database values"""
+    mapping = {
+        'none': 'first_time',
+        'some_experience': 'some_experience', 
+        'experienced': 'experienced'
+    }
+    return mapping.get(frontend_value, 'first_time')
+
+def map_time_commitment(frontend_value):
+    """Map frontend hours_alone values to time_commitment values"""
+    mapping = {
+        '0-4': 'low',
+        '4-8': 'medium', 
+        '8+': 'high'
+    }
+    return mapping.get(frontend_value, 'medium')
+
+def map_home_environment(frontend_value):
+    """Map frontend home_environment to database values"""
+    mapping = {
+        'quiet': 'quiet',
+        'moderate': 'active',  # Map 'moderate' to 'active' since 'moderate' not allowed
+        'active': 'very_active'  # Map 'active' to 'very_active'
+    }
+    return mapping.get(frontend_value, 'quiet')
+
+def validate_profile_data(data):
+    """Ensure all values match database constraints"""
+    # Exact allowed values from database constraints
+    allowed_values = {
+        'experience_level': ['first_time', 'some_experience', 'experienced'],
+        'home_environment': ['quiet', 'active', 'very_active'],  # Exact database values
+        'time_commitment': ['low', 'medium', 'high'],
+        'activity_level': ['low', 'medium', 'high'],
+        'living_space': ['apartment', 'house', 'farm'],
+        'preferred_pet_type': ['dog', 'cat', 'both']  # Note: Database has 'bath' instead of 'both'
+    }
+    
+    # Validate each field
+    for field, allowed in allowed_values.items():
+        if field in data and data[field] not in allowed:
+            print(f"Invalid value for {field}: '{data[field]}'. Allowed: {allowed}")
+            # Set to first allowed value as default
+            data[field] = allowed[0] if allowed else ''
+            print(f"Changed to: '{data[field]}'")
+    
+    return data
 
 @app.route('/api/user/quiz', methods=['GET'])
 @token_required
@@ -965,7 +1034,6 @@ def get_quiz_results(current_user):
                 'profile': response.data[0]
             })
         else:
-            # Return explicit indicator that quiz hasn't been taken
             return jsonify({
                 'has_completed_quiz': False,
                 'message': 'Quiz not completed yet'

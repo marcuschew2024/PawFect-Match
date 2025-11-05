@@ -194,7 +194,7 @@
               
               <div v-else class="quiz-section">
                 <div v-if="userQuiz" class="current-quiz-results mb-4">
-                  <div class="alert alert-info">
+                  <div class="alert alert-success">
                     <h5><i class="bi bi-check-circle me-2"></i>Quiz Completed</h5>
                     <p class="mb-0">Your current preferences are saved. You can update them anytime.</p>
                   </div>
@@ -206,16 +206,29 @@
                         <p><strong>Home Type:</strong> {{ formatQuizValue(userQuiz.living_space) }}</p>
                         <p><strong>Activity Level:</strong> {{ formatQuizValue(userQuiz.activity_level) }}</p>
                         <p><strong>Pet Type:</strong> {{ formatQuizValue(userQuiz.preferred_pet_type) }}</p>
+                        <p><strong>Experience:</strong> {{ formatQuizValue(userQuiz.experience_level) }}</p>
                       </div>
                       <div class="col-md-6">
-                        <p><strong>Experience:</strong> {{ formatQuizValue(userQuiz.experience_level) }}</p>
+                        <p><strong>Home Environment:</strong> {{ formatQuizValue(userQuiz.home_environment) }}</p>
+                        <p><strong>Time Commitment:</strong> {{ formatQuizValue(userQuiz.time_commitment) }}</p>
                         <p><strong>Allergies:</strong> {{ userQuiz.has_allergies ? 'Yes' : 'No' }}</p>
                         <p><strong>Children:</strong> {{ userQuiz.has_children ? 'Yes' : 'No' }}</p>
+                        <p><strong>Other Pets:</strong> {{ userQuiz.has_other_pets ? 'Yes' : 'No' }}</p>
                       </div>
                     </div>
                     <div v-if="userQuiz.allergies" class="row mt-2">
                       <div class="col-12">
                         <p><strong>Allergy Details:</strong> {{ userQuiz.allergies }}</p>
+                      </div>
+                    </div>
+                    <div v-if="userQuiz.children_ages" class="row mt-2">
+                      <div class="col-12">
+                        <p><strong>Children Ages:</strong> {{ userQuiz.children_ages }}</p>
+                      </div>
+                    </div>
+                    <div v-if="userQuiz.other_pets_details" class="row mt-2">
+                      <div class="col-12">
+                        <p><strong>Other Pets:</strong> {{ userQuiz.other_pets_details }}</p>
                       </div>
                     </div>
                   </div>
@@ -256,45 +269,50 @@ export default {
     }
   },
   async mounted() {
-    await this.loadUserProfile();
-    
-    // Load both favorites and adoptions immediately
-    await Promise.all([
-      this.loadFavorites(),
-      this.loadAdoptions()
-    ]);
-    
-    this.activeTab = this.$route.query.tab || 'favorites';
-    
-    // Store reference for external access
-    window.profilePage = this;
-  },
+  await this.loadUserProfile();
+  
+  // Load both favorites and adoptions immediately
+  await Promise.all([
+    this.loadFavorites(),
+    this.loadAdoptions()
+  ]);
+  
+  this.activeTab = this.$route.query.tab || 'favorites';
+  
+  // Only load quiz results if the active tab is quiz
+  if (this.activeTab === 'quiz') {
+    await this.loadQuizResults();
+  }
+  
+  // Store reference for external access
+  window.profilePage = this;
+},
   watch: {
-    activeTab(newTab) {
-      if (newTab === 'quiz') {
-        this.loadQuizResults();
-      }
+  activeTab(newTab) {
+    if (newTab === 'quiz') {
+      this.loadQuizResults();
     }
-  },
+  }
+},
   methods: {
     async loadUserProfile() {
-      try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_BASE_URL}/user/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          const profileData = await response.json();
-          this.user = profileData.user || {};
-          this.userQuiz = profileData.quiz || null;
-        }
-      } catch (error) {
-        console.error('Error loading user profile:', error);
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE_URL}/user/profile`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    },
+    });
+
+    if (response.ok) {
+      const profileData = await response.json();
+      this.user = profileData.user || {};
+      // Don't set userQuiz here - it will be loaded separately
+    }
+  } catch (error) {
+    console.error('Error loading user profile:', error);
+  }
+},
 
     async loadFavorites() {
       this.favoritesLoading = true;
@@ -515,27 +533,34 @@ export default {
     },
 
     async loadQuizResults() {
-      this.quizLoading = true;
-      try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_BASE_URL}/user/quiz`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          this.userQuiz = await response.json();
-        } else {
-          this.userQuiz = null;
-        }
-      } catch (error) {
-        console.error('Error loading quiz results:', error);
-        this.userQuiz = null;
-      } finally {
-        this.quizLoading = false;
+  this.quizLoading = true;
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE_URL}/user/quiz`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    },
+    });
+
+    if (response.ok) {
+      const quizData = await response.json();
+      console.log('Quiz API response:', quizData); // Debug log
+      
+      if (quizData.has_completed_quiz && quizData.profile) {
+        this.userQuiz = quizData.profile;
+      } else {
+        this.userQuiz = null;
+      }
+    } else {
+      this.userQuiz = null;
+    }
+  } catch (error) {
+    console.error('Error loading quiz results:', error);
+    this.userQuiz = null;
+  } finally {
+    this.quizLoading = false;
+  }
+},
 
     async removeFavorite(pet) {
       try {
@@ -580,18 +605,35 @@ export default {
       if (!value) return 'Not specified';
       
       const formatMap = {
+        // Living Space
         'apartment': 'Apartment/Condo',
         'house': 'House with Yard',
         'farm': 'Farm/Rural Area',
+        
+        // Activity Level
         'low': 'Low Activity',
         'medium': 'Moderate Activity',
         'high': 'High Activity',
+        
+        // Pet Type
         'dog': 'Dogs Only',
         'cat': 'Cats Only',
         'both': 'Open to Both',
+        
+        // Experience Level
         'first_time': 'First-time Owner',
         'some_experience': 'Some Experience',
-        'experienced': 'Experienced Owner'
+        'experienced': 'Experienced Owner',
+        
+        // Home Environment
+        'quiet': 'Quiet & Calm',
+        'active': 'Moderately Active',
+        'very_active': 'Very Active',
+        
+        // Time Commitment
+        'low': '0-4 Hours Alone',
+        'medium': '4-8 Hours Alone',
+        'high': '8+ Hours Alone'
       };
       
       return formatMap[value] || value.toString().charAt(0).toUpperCase() + value.slice(1);

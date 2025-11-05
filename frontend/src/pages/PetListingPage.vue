@@ -3,7 +3,12 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="mb-0">Find Your Pawfect Match</h1>
       <div v-if="isAuthenticated" class="d-flex gap-2">
-        <router-link v-if="hasCompletedQuiz" to="/favorites" class="btn btn-outline-primary">
+        <!-- Update Quiz Button -->
+        <button v-if="hasCompletedQuiz" @click="updateQuiz" class="btn btn-outline-primary">
+          <i class="bi bi-arrow-repeat me-2"></i>Update Quiz
+        </button>
+        <!-- View Favorites Button -->
+        <router-link to="/favorites" class="btn btn-outline-primary">
           <i class="bi bi-heart me-2"></i>View Favorites
         </router-link>
       </div>
@@ -20,6 +25,23 @@
         </button>
       </div>
     </div>
+
+    <!-- Show brief quiz info if user has completed quiz -->
+    <!-- <div v-if="isAuthenticated && hasCompletedQuiz && userProfile" class="alert alert-success mb-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <i class="bi bi-check-circle me-2"></i>
+          <strong>Your Preferences:</strong> 
+          {{ formatQuizValue(userProfile.living_space) }}, 
+          {{ formatQuizValue(userProfile.activity_level) }}, 
+          {{ formatQuizValue(userProfile.preferred_pet_type) }}
+          <span v-if="userProfile.has_allergies" class="text-muted"> • Has Allergies</span>
+        </div>
+        <button class="btn btn-outline-success btn-sm" @click="updateQuiz">
+          <i class="bi bi-arrow-repeat me-1"></i>Update
+        </button>
+      </div>
+    </div> -->
 
     <div class="filter-section">
       <div class="row g-3 align-items-end">
@@ -499,6 +521,30 @@ async fetchRegularPets() {
       } catch (error) {
         console.error('Error toggling favorite:', error);
       }
+    },
+
+    // New method to update quiz
+    updateQuiz() {
+      this.$router.push('/quiz');
+    },
+
+    // Format quiz values for display
+    formatQuizValue(value) {
+      if (!value) return 'Not specified';
+      
+      const formatMap = {
+        'apartment': 'Apartment',
+        'house': 'House',
+        'farm': 'Farm',
+        'low': 'Low Activity',
+        'medium': 'Moderate Activity',
+        'high': 'High Activity',
+        'dog': 'Dogs',
+        'cat': 'Cats',
+        'both': 'Both'
+      };
+      
+      return formatMap[value] || value.toString().charAt(0).toUpperCase() + value.slice(1);
     },
 
     getActivityClass(activity) {
