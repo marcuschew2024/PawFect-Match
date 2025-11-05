@@ -130,11 +130,6 @@
             <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
               Real Image
             </div>
-<<<<<<< Updated upstream
-            
-=======
-
->>>>>>> Stashed changes
             <div v-if="!pet.imageLoaded" class="image-loading">
               <i class="bi bi-arrow-repeat spinner"></i>
             </div>
@@ -254,11 +249,7 @@ export default {
 
 
     async initializePage() {
-<<<<<<< Updated upstream
-      // Load the breeds first 
-=======
       this.checkAuth();
->>>>>>> Stashed changes
       await this.loadAllBreeds();
 
       // Check if user has completed quiz
@@ -583,8 +574,6 @@ export default {
       this.filteredPets = [...this.pets];
     },
 
-<<<<<<< Updated upstream
-=======
     async processPetsWithImages(pets) {
       const processedPets = pets.map(pet => {
         // Check if pet has a valid image in database
@@ -816,7 +805,6 @@ export default {
       this.filteredPets = [...this.pets];
     },
 
->>>>>>> Stashed changes
     findBreedId(breedName, type) {
       const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
 

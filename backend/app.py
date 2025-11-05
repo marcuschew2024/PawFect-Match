@@ -1084,11 +1084,7 @@ def health_check():
         'framework': 'Flask',
         'authentication': 'JWT + Password Hash'
     })
-<<<<<<< Updated upstream
-#----------------------communityPage----------------------------
-=======
 #forum
->>>>>>> Stashed changes
 # Get all questions with answers and user info
 @app.route('/api/forum/questions', methods=['GET'])
 
