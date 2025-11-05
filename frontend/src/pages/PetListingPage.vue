@@ -222,6 +222,22 @@ export default {
     await this.initializePage();
   },
   methods: {
+    showToast(message, type = "info") {
+      const toast = document.createElement("div");
+      toast.className = `alert alert-${type === "error" ? "danger" : "success"} alert-dismissible fade show position-fixed`;
+      toast.style.cssText = "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+      toast.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 5000);
+    },
     checkAuth() {
       const token = localStorage.getItem('authToken');
       this.isAuthenticated = !!token;
@@ -239,119 +255,119 @@ export default {
     },
 
     async checkQuizCompletion() {
-  try {
-    const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/user/quiz`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/user/quiz`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.has_completed_quiz) {
-        this.userProfile = data.profile;
-        this.hasCompletedQuiz = true;
-        return true;
-      } else {
+        if (response.ok) {
+          const data = await response.json();
+          if (data.has_completed_quiz) {
+            this.userProfile = data.profile;
+            this.hasCompletedQuiz = true;
+            return true;
+          } else {
+            this.hasCompletedQuiz = false;
+            return false;
+          }
+        } else {
+          this.hasCompletedQuiz = false;
+          return false;
+        }
+      } catch (error) {
+        console.log('Error checking quiz completion:', error.message);
         this.hasCompletedQuiz = false;
         return false;
       }
-    } else {
-      this.hasCompletedQuiz = false;
-      return false;
-    }
-  } catch (error) {
-    console.log('Error checking quiz completion:', error.message);
-    this.hasCompletedQuiz = false;
-    return false;
-  }
-},
+    },
 
     async fetchPets() {
-  this.loading = true;
-  this.error = null;
+      this.loading = true;
+      this.error = null;
 
-  try {
-    const token = localStorage.getItem('authToken');
-    let url = `${API_BASE_URL}/pets`;
+      try {
+        const token = localStorage.getItem('authToken');
+        let url = `${API_BASE_URL}/pets`;
 
-    // Only try to fetch with scores if user has completed quiz
-    if (this.isAuthenticated && this.hasCompletedQuiz) {
-      url = `${API_BASE_URL}/pets/with-scores`;
-    }
+        // Only try to fetch with scores if user has completed quiz
+        if (this.isAuthenticated && this.hasCompletedQuiz) {
+          url = `${API_BASE_URL}/pets/with-scores`;
+        }
 
-    const headers = {
-      'Content-Type': 'application/json'
-    };
+        const headers = {
+          'Content-Type': 'application/json'
+        };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
-    const response = await fetch(url, { headers });
+        const response = await fetch(url, { headers });
 
-    if (!response.ok) {
-      // If with-scores fails, fall back to regular pets endpoint
-      if (response.status === 404 || response.status === 400) {
-        console.log('Quiz data not found, falling back to regular pets endpoint');
-        this.hasCompletedQuiz = false;
-        return await this.fetchRegularPets();
+        if (!response.ok) {
+          // If with-scores fails, fall back to regular pets endpoint
+          if (response.status === 404 || response.status === 400) {
+            console.log('Quiz data not found, falling back to regular pets endpoint');
+            this.hasCompletedQuiz = false;
+            return await this.fetchRegularPets();
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        let data = await response.json();
+        this.pets = await this.processPetsWithImages(data);
+        this.filteredPets = [...this.pets];
+
+      } catch (error) {
+        console.error('Error fetching pets:', error);
+
+        // If error is related to quiz data, fall back to regular pets
+        if (error.message.includes('404') || error.message.includes('400')) {
+          console.log('Falling back to regular pets endpoint');
+          this.hasCompletedQuiz = false;
+          await this.fetchRegularPets();
+        } else {
+          this.error = error.message;
+        }
+      } finally {
+        this.loading = false;
       }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    },
 
-    let data = await response.json();
-    this.pets = await this.processPetsWithImages(data);
-    this.filteredPets = [...this.pets];
+    // Helper method to fetch regular pets
+    async fetchRegularPets() {
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers = {
+          'Content-Type': 'application/json'
+        };
 
-  } catch (error) {
-    console.error('Error fetching pets:', error);
-    
-    // If error is related to quiz data, fall back to regular pets
-    if (error.message.includes('404') || error.message.includes('400')) {
-      console.log('Falling back to regular pets endpoint');
-      this.hasCompletedQuiz = false;
-      await this.fetchRegularPets();
-    } else {
-      this.error = error.message;
-    }
-  } finally {
-    this.loading = false;
-  }
-},
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
-// Helper method to fetch regular pets
-async fetchRegularPets() {
-  try {
-    const token = localStorage.getItem('authToken');
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+        const response = await fetch(`${API_BASE_URL}/pets`, { headers });
 
-    const response = await fetch(`${API_BASE_URL}/pets`, { headers });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-    let data = await response.json();
-    this.pets = await this.processPetsWithImages(data);
-    this.filteredPets = [...this.pets];
-  } catch (error) {
-    this.error = error.message;
-  }
-},
+        let data = await response.json();
+        this.pets = await this.processPetsWithImages(data);
+        this.filteredPets = [...this.pets];
+      } catch (error) {
+        this.error = error.message;
+      }
+    },
 
     async processPetsWithImages(pets) {
       const processedPets = pets.map(pet => {
         let displayImage = null;
         let imageSource = 'placeholder';
-        
+
         if (pet.main_image && pet.main_image.trim() !== '') {
           displayImage = pet.main_image;
           imageSource = 'database';
@@ -503,6 +519,7 @@ async fetchRegularPets() {
             }
           });
           pet.is_favorite = false;
+          this.showToast("Removed from favorites", "success"); // Add this line
         } else {
           await fetch(`${API_BASE_URL}/user/favorites`, {
             method: 'POST',
@@ -513,6 +530,7 @@ async fetchRegularPets() {
             body: JSON.stringify({ pet_id: pet.id })
           });
           pet.is_favorite = true;
+          this.showToast("Added to favorites!", "success"); // Add this line
         }
 
         this.pets = [...this.pets];
@@ -520,9 +538,10 @@ async fetchRegularPets() {
 
       } catch (error) {
         console.error('Error toggling favorite:', error);
+        this.showToast("Failed to update favorites. Please try again.", "error"); // Add this line
       }
     },
-
+    
     // New method to update quiz
     updateQuiz() {
       this.$router.push('/quiz');
@@ -531,7 +550,7 @@ async fetchRegularPets() {
     // Format quiz values for display
     formatQuizValue(value) {
       if (!value) return 'Not specified';
-      
+
       const formatMap = {
         'apartment': 'Apartment',
         'house': 'House',
@@ -543,7 +562,7 @@ async fetchRegularPets() {
         'cat': 'Cats',
         'both': 'Both'
       };
-      
+
       return formatMap[value] || value.toString().charAt(0).toUpperCase() + value.slice(1);
     },
 
@@ -678,6 +697,7 @@ async fetchRegularPets() {
     startAdoption(pet) {
       this.$router.push(`/adopt/${pet.id}`);
     }
+
   }
 }
 </script>
