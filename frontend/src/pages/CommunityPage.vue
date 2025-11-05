@@ -3,16 +3,22 @@
     <!-- Toast Notifications -->
     <div class="toast-container">
       <transition-group name="toast">
-        <div v-for="toast in toastNotifications" :key="toast.id" :class="['toast-notification', `toast-${toast.type}`]"
-          @click="removeToastNotification(toast.id)">
+        <div
+          v-for="toast in toastNotifications"
+          :key="toast.id"
+          :class="['toast-notification', `toast-${toast.type}`]"
+          @click="removeToastNotification(toast.id)"
+        >
           <div class="toast-icon">
-            <i :class="[
-              'bi',
-              toast.type === 'warning' ? 'bi-exclamation-triangle-fill' :
+            <i
+              :class="[
+                'bi',
+                toast.type === 'warning' ? 'bi-exclamation-triangle-fill' :
                 toast.type === 'success' ? 'bi-check-circle-fill' :
-                  toast.type === 'error' ? 'bi-x-circle-fill' :
-                    'bi-info-circle-fill'
-            ]"></i>
+                toast.type === 'error' ? 'bi-x-circle-fill' :
+                'bi-info-circle-fill'
+              ]"
+            ></i>
           </div>
           <div class="toast-content">
             <p class="toast-message">{{ toast.message }}</p>
@@ -57,8 +63,13 @@
       <div class="row g-3 align-items-end">
         <div class="col-md-6">
           <label for="searchInput" class="form-label">Search Questions</label>
-          <input type="text" id="searchInput" class="form-control" v-model="searchTerm"
-            placeholder="Search by title or content..." />
+          <input
+            type="text"
+            id="searchInput"
+            class="form-control"
+            v-model="searchTerm"
+            placeholder="Search by title or content..."
+          />
         </div>
         <div class="col-md-3">
           <label for="categoryFilter" class="form-label">Category</label>
@@ -95,8 +106,7 @@
       <div v-for="question in filteredQuestions" :key="question.id" class="question-card">
         <div class="card-body">
           <h5 class="fw-semibold mb-2">{{ question.title }}</h5>
-          <p class="text-muted mb-3" style="white-space: pre-wrap; word-wrap: break-word;">{{
-            truncateContent(question.content) }}</p>
+          <p class="text-muted mb-3">{{ truncateContent(question.content) }}</p>
 
           <div class="d-flex justify-content-between align-items-center flex-wrap small text-muted mb-3">
             <div>
@@ -111,50 +121,68 @@
 
           <!-- Reply input -->
           <div v-if="isAuthenticated" class="reply-box mb-3">
-            <textarea class="form-control" v-model="question.newAnswer" rows="2"
-              placeholder="Write your reply..."></textarea>
+            <textarea
+              class="form-control"
+              v-model="question.newAnswer"
+              rows="2"
+              placeholder="Write your reply..."
+            ></textarea>
           </div>
 
+          <!-- Buttons row -->
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
             <div class="d-flex gap-2">
-              <button class="btn btn-pink-outline btn-sm" @click="handleReplyClick(question)">
+              <button
+                class="btn btn-pink-outline btn-sm"
+                @click="handleReplyClick(question)"
+              >
                 <i class="bi bi-send me-1"></i>Reply
               </button>
               <button class="btn btn-pink-outline btn-sm" @click="toggleDiscussion(question.id)">
-                <i class="bi me-1" :class="expandedQuestion === question.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                <i
+                  class="bi me-1"
+                  :class="expandedQuestion === question.id ? 'bi-chevron-up' : 'bi-chevron-down'"
+                ></i>
                 {{ expandedQuestion === question.id ? 'Hide Discussion' : 'View Discussion' }}
               </button>
             </div>
 
             <div>
-              <button :class="['btn btn-sm', question.liked ? 'btn-danger' : 'btn-outline-danger']"
-                @click="toggleQuestionLike(question)">
+              <button 
+                :class="['btn btn-sm', question.liked ? 'btn-danger' : 'btn-outline-danger']"
+                @click="toggleQuestionLike(question)"
+              >
                 <i :class="question.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
                 {{ question.likes }}
               </button>
             </div>
           </div>
 
-          <!-- replies under dropdown -->
+          <!-- Dropdown replies -->
           <transition name="fade">
             <div v-if="expandedQuestion === question.id" class="discussion-dropdown mt-3">
               <div v-if="question.answers.length === 0" class="text-muted small text-center py-3">
                 No replies yet. Be the first to respond!
               </div>
 
-              <div v-for="answer in question.answers" :key="answer.id" class="answer-item">
+              <div v-for="answer in sortedAnswers(question.answers)" :key="answer.id" class="answer-item">
                 <div class="d-flex justify-content-between align-items-start">
                   <small class="text-muted">
                     <i class="bi bi-person-circle me-1"></i>{{ answer.author }} •
                     {{ formatDate(answer.createdAt) }}
                   </small>
                   <div class="d-flex gap-2">
-                    <button v-if="answer.author_id === currentUserId" class="btn btn-outline-danger btn-sm"
-                      @click="deleteAnswer(question.id, answer.id)">
+                    <button
+                      v-if="answer.author_id === currentUserId"
+                      class="btn btn-outline-danger btn-sm"
+                      @click="deleteAnswer(answer.id)"
+                    >
                       Delete
                     </button>
-                    <button :class="['btn btn-sm', answer.liked ? 'btn-primary' : 'btn-outline-primary']"
-                      @click="toggleAnswerLike(answer)">
+                    <button 
+                      :class="['btn btn-sm', answer.liked ? 'btn-primary' : 'btn-outline-primary']"
+                      @click="toggleAnswerLike(answer)"
+                    >
                       <i :class="answer.liked ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"></i>
                       {{ answer.likes }}
                     </button>
@@ -229,13 +257,15 @@ export default {
       currentUserId: null,
       expandedQuestion: null,
 
+      // Ask question modal
       showQuestionModal: false,
       newQuestion: { title: "", content: "", category: "general" },
 
+      // Notification system
       showNotification: false,
       notificationMessage: "",
       notificationTitle: "",
-      notificationType: "info",
+      notificationType: "info", // success, error, warning, info
       notificationTimeout: null,
 
       // Toast notification system
@@ -269,13 +299,16 @@ export default {
       this.showNotification = false;
     },
     goToLogin() {
+      // Redirect to login page - adjust this route as needed
       this.$router.push('/login');
+      // OR if you don't have router:
+      // window.location.href = '/login';
     },
     showToastNotification(message, type = "info") {
       const id = this.toastIdCounter++;
       const toast = { id, message, type };
       this.toastNotifications.push(toast);
-
+      
       setTimeout(() => {
         this.removeToastNotification(id);
       }, 4000);
@@ -291,64 +324,23 @@ export default {
       const token = localStorage.getItem("authToken");
       this.isAuthenticated = !!token;
       this.currentUserId = token ? parseInt(localStorage.getItem("userId")) : null;
+      
     },
-
     async fetchQuestions() {
       this.loading = true;
       try {
         const res = await fetch(`${API_BASE_URL}/forum/questions`);
         const data = await res.json();
-
-        // Fetch user's likes if they are authenticated
-        let userQuestionLikes = new Set();
-        let userAnswerLikes = new Set();
-
-        if (this.isAuthenticated) {
-          const token = localStorage.getItem("authToken");
-
-          try {
-            // Fetch question likes
-            const qLikesRes = await fetch(`${API_BASE_URL}/forum/question-likes/user`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            if (qLikesRes.ok) {
-              const qLikes = await qLikesRes.json();
-              userQuestionLikes = new Set(qLikes.map(like => like.question_id));
-            }
-
-            // Fetch answer likes
-            const aLikesRes = await fetch(`${API_BASE_URL}/forum/answer-likes/user`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            if (aLikesRes.ok) {
-              const aLikes = await aLikesRes.json();
-              userAnswerLikes = new Set(aLikes.map(like => like.answer_id));
-            }
-          } catch (err) {
-            console.error("Failed to fetch user likes:", err);
-          }
-        }
-
-
-        this.questions = data.map((q) => ({
-          ...q,
-          newAnswer: "",
-          liked: userQuestionLikes.has(q.id),
-          answers: (q.answers || []).map(a => ({
-            ...a,
-            liked: userAnswerLikes.has(a.id)
-          }))
-        }));
-
+        this.questions = data.map((q) => ({ ...q, newAnswer: "", liked: false }));
+        // Sort questions by likes in descending order (most liked first)
+        this.questions.sort((a, b) => b.likes - a.likes);
         this.filteredQuestions = [...this.questions];
       } catch (err) {
-        console.error("Error fetching questions:", err);
         this.error = "Failed to load questions.";
       } finally {
         this.loading = false;
       }
     },
-
     applyFilters() {
       this.filteredQuestions = this.questions.filter((q) => {
         const matchSearch =
@@ -360,26 +352,21 @@ export default {
         return matchSearch && matchCategory;
       });
     },
-
     resetFilters() {
       this.searchTerm = "";
       this.filters.category = "all";
       this.filteredQuestions = [...this.questions];
     },
-
     formatDate(iso) {
       const d = new Date(iso);
       return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
     },
-
-    truncateContent(txt, len = 600) {
+    truncateContent(txt, len = 160) {
       return txt.length > len ? txt.slice(0, len) + "..." : txt;
     },
-
     toggleDiscussion(id) {
       this.expandedQuestion = this.expandedQuestion === id ? null : id;
     },
-
     handleReplyClick(question) {
       if (!this.isAuthenticated) {
         this.showAuthModal(
@@ -388,9 +375,9 @@ export default {
         );
         return;
       }
+      // If logged in, submit the answer
       this.submitAnswerToCard(question);
     },
-
     async submitAnswerToCard(question) {
       if (!question.newAnswer.trim()) {
         this.showToastNotification(
@@ -411,44 +398,30 @@ export default {
         });
         if (!res.ok) throw new Error("Failed to submit reply");
         const newAnswer = await res.json();
-        newAnswer.liked = false;
         question.answers.push(newAnswer);
         question.newAnswer = "";
         this.showToastNotification("Reply submitted successfully!", "success");
       } catch (err) {
-        console.error("Error submitting answer:", err);
         this.showToastNotification(
           "Failed to submit reply. Please try again.",
           "error"
         );
       }
     },
-
-    async deleteAnswer(questionId, answerId) {
+    async deleteAnswer(id) {
       if (!confirm("Delete this answer?")) return;
-
-      try {
-        const token = localStorage.getItem("authToken");
-        const res = await fetch(`${API_BASE_URL}/forum/answers/${answerId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (res.ok) {
-          // Find the question and remove the answer
-          const question = this.questions.find(q => q.id === questionId);
-          if (question) {
-            question.answers = question.answers.filter((a) => a.id !== answerId);
-          }
-          this.showToastNotification("Answer deleted successfully.", "success");
-        }
-      } catch (err) {
-        console.error("Error deleting answer:", err);
-        this.showToastNotification("Failed to delete answer.", "error");
-      }
+      const token = localStorage.getItem("authToken");
+      await fetch(`${API_BASE_URL}/forum/answers/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      this.questions.forEach((q) => {
+        q.answers = q.answers.filter((a) => a.id !== id);
+      });
+      this.showToastNotification("Answer deleted successfully.", "success");
     },
-
     async toggleQuestionLike(q) {
+      // Check if user is authenticated
       if (!this.isAuthenticated) {
         this.showAuthModal(
           "Like this post?",
@@ -458,22 +431,22 @@ export default {
       }
 
       const token = localStorage.getItem("authToken");
-      try {
-        const res = await fetch(`${API_BASE_URL}/forum/questions/${q.id}/like`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          q.liked = data.liked;
-          q.likes = data.likes;
-        }
-      } catch (err) {
-        console.error("Error toggling question like:", err);
+      const res = await fetch(`${API_BASE_URL}/forum/questions/${q.id}/like`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        q.liked = data.liked;
+        q.likes = data.likes;
+        
+        // Re-sort questions after like update
+        this.questions.sort((a, b) => b.likes - a.likes);
+        this.filteredQuestions = [...this.questions];
       }
     },
-
     async toggleAnswerLike(a) {
+      // Check if user is authenticated
       if (!this.isAuthenticated) {
         this.showAuthModal(
           "Like this reply?",
@@ -483,31 +456,32 @@ export default {
       }
 
       const token = localStorage.getItem("authToken");
-      try {
-        const res = await fetch(`${API_BASE_URL}/forum/answers/${a.id}/like`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          a.liked = data.liked;
-          a.likes = data.likes;
-        }
-      } catch (err) {
-        console.error("Error toggling answer like:", err);
+      const res = await fetch(`${API_BASE_URL}/forum/answers/${a.id}/like`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        a.liked = data.liked;
+        a.likes = data.likes;
+        // Force re-render to update the sorted order
+        this.$forceUpdate();
       }
     },
+    
+    // Helper method to sort answers by likes
+    sortedAnswers(answers) {
+      return [...answers].sort((a, b) => b.likes - a.likes);
+    },
 
-    // Ask Question 
+    // Ask Question Modal
     openQuestionModal() {
       this.showQuestionModal = true;
     },
-
     closeQuestionModal() {
       this.showQuestionModal = false;
       this.newQuestion = { title: "", content: "", category: "general" };
     },
-
     async submitQuestion() {
       if (!this.newQuestion.title.trim() || !this.newQuestion.content.trim()) {
         this.showToastNotification(
@@ -538,7 +512,6 @@ export default {
         this.closeQuestionModal();
         this.showToastNotification("Question posted successfully!", "success");
       } catch (err) {
-        console.error("Error submitting question:", err);
         this.showToastNotification(
           "Failed to submit question. Please try again.",
           "error"
@@ -550,7 +523,7 @@ export default {
 </script>
 
 <style scoped>
-/* Toast Notifications */
+/* Toast Notification Styles */
 .toast-container {
   position: fixed;
   top: 20px;
@@ -675,7 +648,6 @@ export default {
     opacity: 0;
     transform: translateX(100%);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
@@ -687,14 +659,13 @@ export default {
     opacity: 1;
     transform: translateX(0);
   }
-
   to {
     opacity: 0;
     transform: translateX(100%);
   }
 }
 
-/* Auth Modal */
+/* Auth Modal Styles */
 .auth-modal-overlay {
   position: fixed;
   top: 0;
@@ -825,7 +796,6 @@ export default {
     opacity: 0;
     transform: translateY(50px) scale(0.9);
   }
-
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -844,7 +814,6 @@ export default {
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -854,7 +823,6 @@ export default {
   from {
     opacity: 1;
   }
-
   to {
     opacity: 0;
   }
@@ -865,11 +833,11 @@ export default {
     padding: 35px 25px;
     max-width: 90%;
   }
-
+  
   .auth-modal-title {
     font-size: 21px;
   }
-
+  
   .auth-modal-message {
     font-size: 14px;
   }
@@ -880,12 +848,13 @@ export default {
     left: 10px;
     max-width: none;
   }
-
+  
   .toast-notification {
     min-width: auto;
   }
 }
 
+/* Original Styles */
 .btn-box {
   background: linear-gradient(135deg, #ff868a 0%, #fa9696 100%);
   color: white;
@@ -923,9 +892,10 @@ export default {
 }
 
 .btn-pink {
+  /* background: linear-gradient(135deg, #ff7d82 0%, #fa9696 100%); */
   background-origin: white;
   color: #ff6b9a;
-  border: #ff6b9a solid 1px !important;
+  border:  #ff6b9a solid 1px !important;
   padding: 12px 25px;
   font-weight: 600;
   transition: all 0.3s ease;
