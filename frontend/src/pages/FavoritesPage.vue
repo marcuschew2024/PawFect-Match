@@ -14,7 +14,7 @@
         Loading your favorites...
       </div>
     </div>
-    
+
     <!-- Error State -->
     <div v-else-if="error" class="col-12">
       <div class="error-message text-center">
@@ -28,7 +28,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Empty State -->
     <div v-else-if="favoritePets.length === 0" class="col-12">
       <div class="no-results text-center py-5">
@@ -187,10 +187,26 @@ export default {
     await this.loadFavorites();
   },
   methods: {
+    showToast(message, type = "info") {
+      const toast = document.createElement("div");
+      toast.className = `alert alert-${type === "error" ? "danger" : "success"} alert-dismissible fade show position-fixed`;
+      toast.style.cssText = "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+      toast.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 5000);
+    },
     async loadFavorites() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const token = localStorage.getItem('authToken');
         if (!token) {
@@ -210,7 +226,7 @@ export default {
         }
 
         const favoriteIds = await favoritesResponse.json();
-        
+
         if (favoriteIds.length === 0) {
           this.favoritePets = [];
           this.loading = false;
@@ -254,10 +270,10 @@ export default {
             throw new Error('Failed to load pet details');
           }
         }
-        
+
         // Filter to only include favorited pets
         const favoritePetsData = allPets.filter(pet => favoriteIds.includes(pet.id));
-        
+
         // Process pets with images (same as PetListing page)
         this.favoritePets = await this.processPetsWithImages(favoritePetsData);
 
@@ -273,7 +289,7 @@ export default {
       const processedPets = pets.map(pet => {
         let displayImage = null;
         let imageSource = 'placeholder';
-        
+
         // Use the exact same logic as PetListing page
         if (pet.main_image && pet.main_image.trim() !== '') {
           displayImage = pet.main_image;
@@ -455,12 +471,13 @@ export default {
         if (response.ok) {
           // Remove from local array
           this.favoritePets = this.favoritePets.filter(p => p.id !== pet.id);
+          this.showToast("Removed from favorites", "success"); // Add this line
         } else {
           throw new Error('Failed to remove favorite');
         }
       } catch (error) {
         console.error('Error removing favorite:', error);
-        alert('Error removing favorite. Please try again.');
+        this.showToast("Failed to remove favorite. Please try again.", "error"); // Add this line
       }
     },
 
@@ -633,8 +650,13 @@ export default {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .pet-card {
@@ -725,6 +747,7 @@ export default {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

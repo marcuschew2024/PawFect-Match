@@ -12,7 +12,7 @@
               <h4>{{ user.full_name }}</h4>
               <p class="text-muted">{{ user.email }}</p>
             </div>
-            
+
             <div class="profile-stats mb-4">
               <div class="stat-item text-center p-3">
                 <div class="stat-number text-primary">{{ favoritePets.length }}</div>
@@ -23,24 +23,21 @@
                 <div class="stat-label">Adoptions</div>
               </div>
             </div>
-            
+
             <nav class="profile-nav">
               <ul class="nav flex-column">
                 <li class="nav-item">
-                  <a class="nav-link" :class="{ active: activeTab === 'favorites' }" 
-                     @click="activeTab = 'favorites'">
+                  <a class="nav-link" :class="{ active: activeTab === 'favorites' }" @click="activeTab = 'favorites'">
                     <i class="bi bi-heart me-2"></i>My Favorites
                   </a>
                 </li>
                 <li class="nav-item">
-                  <a class="nav-link" :class="{ active: activeTab === 'adoptions' }" 
-                     @click="activeTab = 'adoptions'">
+                  <a class="nav-link" :class="{ active: activeTab === 'adoptions' }" @click="activeTab = 'adoptions'">
                     <i class="bi bi-house-check me-2"></i>My Adoptions
                   </a>
                 </li>
                 <li class="nav-item">
-                  <a class="nav-link" :class="{ active: activeTab === 'quiz' }" 
-                     @click="activeTab = 'quiz'">
+                  <a class="nav-link" :class="{ active: activeTab === 'quiz' }" @click="activeTab = 'quiz'">
                     <i class="bi bi-clipboard-check me-2"></i>Lifestyle Quiz
                   </a>
                 </li>
@@ -48,11 +45,11 @@
             </nav>
           </div>
         </div>
-        
+
         <div class="col-lg-9">
           <!-- Profile Content -->
           <div class="profile-content">
-            
+
             <!-- Favorites Tab -->
             <div v-if="activeTab === 'favorites'" class="tab-content">
               <div class="d-flex justify-content-between align-items-center mb-4">
@@ -61,13 +58,13 @@
                   <i class="bi bi-search me-2"></i>Browse More Pets
                 </router-link>
               </div>
-              
+
               <div v-if="favoritesLoading" class="text-center">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
               </div>
-              
+
               <div v-else-if="favoritePets.length === 0" class="text-center py-5">
                 <i class="bi bi-heart display-1 text-muted mb-3"></i>
                 <h4 class="text-muted">No favorites yet</h4>
@@ -76,19 +73,15 @@
                   <i class="bi bi-search me-2"></i>Browse Pets
                 </router-link>
               </div>
-              
+
               <div v-else class="row">
                 <div class="col-md-6 col-lg-4 mb-4" v-for="pet in favoritePets" :key="pet.id">
                   <div class="card h-100 pet-card">
                     <div class="position-relative">
-                      <img :src="pet.displayImage" 
-                           :alt="pet.name"
-                           class="card-img-top"
-                           :class="{ 'image-loaded': pet.imageLoaded }"
-                           @load="onImageLoad(pet)"
-                           @error="onImageError(pet)"
-                           loading="lazy">
-                      
+                      <img :src="pet.displayImage" :alt="pet.name" class="card-img-top"
+                        :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
+                        loading="lazy">
+
                       <!-- Compatibility Badge -->
                       <div v-if="pet.compatibility_score" class="compatibility-badge">
                         {{ pet.compatibility_score }}% Match
@@ -103,7 +96,8 @@
                       <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
                         AI Generated Image
                       </div>
-                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
+                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded"
+                        class="api-badge database-badge">
                         Real Image
                       </div>
 
@@ -111,10 +105,10 @@
                         <i class="bi bi-arrow-repeat spinner"></i>
                       </div>
                     </div>
-                    
+
                     <div class="card-body d-flex flex-column">
                       <h5 class="card-title">{{ pet.name }}</h5>
-                      
+
                       <!-- Compatibility Meter -->
                       <div v-if="pet.compatibility_score" class="compatibility-meter mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -127,7 +121,7 @@
                           <div class="progress-bar bg-primary" :style="{ width: pet.compatibility_score + '%' }"></div>
                         </div>
                       </div>
-                      
+
                       <p class="card-text mb-2 flex-grow-1">
                         <strong>Age:</strong> {{ pet.age }}<br>
                         <strong>Breed:</strong> {{ pet.breed }}<br>
@@ -140,7 +134,7 @@
                       </p>
                       <p class="card-text personality">"{{ pet.personality }}"</p>
                     </div>
-                    
+
                     <div class="card-footer bg-transparent">
                       <div class="d-grid gap-2">
                         <button class="btn view-more-btn" @click="viewPetDetails(pet)">View More</button>
@@ -153,21 +147,20 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Adoptions Tab -->
             <div v-if="activeTab === 'adoptions'" class="tab-content">
               <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3>My Adoptions</h3>
               </div>
-              
+
               <div v-if="adoptionsLoading" class="text-center">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
               </div>
-              
-              <div v-else-if="adoptedPets.length === 0" 
-                   class="text-center py-5">
+
+              <div v-else-if="adoptedPets.length === 0" class="text-center py-5">
                 <i class="bi bi-house-check display-1 text-muted mb-3"></i>
                 <h4 class="text-muted">No adoptions yet</h4>
                 <p class="text-muted">Start browsing pets and submit adoption applications!</p>
@@ -175,40 +168,37 @@
                   <i class="bi bi-search me-2"></i>Browse Pets
                 </router-link>
               </div>
-              
+
               <div v-else class="row">
                 <div class="col-md-6 col-lg-4 mb-4" v-for="pet in adoptedPets" :key="pet.id">
                   <div class="card h-100 pet-card">
                     <div class="position-relative">
-                      <img :src="pet.displayImage" 
-                           :alt="pet.name"
-                           class="card-img-top"
-                           :class="{ 'image-loaded': pet.imageLoaded }"
-                           @load="onImageLoad(pet)"
-                           @error="onImageError(pet)"
-                           loading="lazy">
-                      
+                      <img :src="pet.displayImage" :alt="pet.name" class="card-img-top"
+                        :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
+                        loading="lazy">
+
                       <!-- Image Source Badge -->
                       <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
                         AI Generated Image
                       </div>
-                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
+                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded"
+                        class="api-badge database-badge">
                         Real Image
                       </div>
 
                       <div v-if="!pet.imageLoaded" class="image-loading">
                         <i class="bi bi-arrow-repeat spinner"></i>
                       </div>
-                      
+
                       <!-- Adopted Badge -->
                       <div class="adoption-badge">
                         <i class="bi bi-check-circle me-1"></i>Adopted
                       </div>
                     </div>
-                    
+
                     <div class="card-body d-flex flex-column">
                       <h5 class="card-title">{{ pet.name }}</h5>
-                      
+
                       <p class="card-text mb-2 flex-grow-1">
                         <strong>Age:</strong> {{ pet.age }}<br>
                         <strong>Breed:</strong> {{ pet.breed }}<br>
@@ -218,7 +208,7 @@
                       </p>
                       <p class="card-text personality">"{{ pet.personality }}"</p>
                     </div>
-                    
+
                     <div class="card-footer bg-transparent">
                       <div class="d-grid">
                         <button class="btn view-more-btn" @click="viewPetDetails(pet)">View Details</button>
@@ -228,7 +218,7 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Quiz Tab -->
             <div v-if="activeTab === 'quiz'" class="tab-content">
               <div class="d-flex justify-content-between align-items-center mb-4">
@@ -238,20 +228,20 @@
                   {{ userQuiz ? 'Update Quiz' : 'Take Quiz' }}
                 </button>
               </div>
-              
+
               <div v-if="quizLoading" class="text-center">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
               </div>
-              
+
               <div v-else class="quiz-section">
                 <div v-if="userQuiz" class="current-quiz-results mb-4">
                   <div class="alert alert-success">
                     <h5><i class="bi bi-check-circle me-2"></i>Quiz Completed</h5>
                     <p class="mb-0">Your current preferences are saved. You can update them anytime.</p>
                   </div>
-                  
+
                   <div class="quiz-summary p-4 bg-light rounded">
                     <h6 class="mb-3">Current Preferences</h6>
                     <div class="row">
@@ -286,7 +276,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <div v-else class="text-center py-5">
                   <i class="bi bi-clipboard-check display-1 text-muted mb-3"></i>
                   <h4 class="text-muted">No Quiz Completed</h4>
@@ -327,20 +317,20 @@ export default {
   async mounted() {
     await this.loadUserProfile();
     await this.loadAllBreeds();
-    
+
     // Load both favorites and adoptions immediately
     await Promise.all([
       this.loadFavorites(),
       this.loadAdoptions()
     ]);
-    
+
     this.activeTab = this.$route.query.tab || 'favorites';
-    
+
     // Only load quiz results if the active tab is quiz
     if (this.activeTab === 'quiz') {
       await this.loadQuizResults();
     }
-    
+
     // Store reference for external access
     window.profilePage = this;
   },
@@ -352,6 +342,22 @@ export default {
     }
   },
   methods: {
+    showToast(message, type = "info") {
+      const toast = document.createElement("div");
+      toast.className = `alert alert-${type === "error" ? "danger" : "success"} alert-dismissible fade show position-fixed`;
+      toast.style.cssText = "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+      toast.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 5000);
+    },
     async loadUserProfile() {
       try {
         const token = localStorage.getItem('authToken');
@@ -374,7 +380,7 @@ export default {
       this.favoritesLoading = true;
       try {
         const token = localStorage.getItem('authToken');
-        
+
         // Get favorite IDs
         const favoritesResponse = await fetch(`${API_BASE_URL}/user/favorites`, {
           headers: {
@@ -385,7 +391,7 @@ export default {
         if (favoritesResponse.ok) {
           const favoriteIds = await favoritesResponse.json();
           console.log('Favorite IDs:', favoriteIds);
-          
+
           if (favoriteIds.length === 0) {
             this.favoritePets = [];
             return;
@@ -401,11 +407,11 @@ export default {
           if (petsResponse.ok) {
             let allPets = await petsResponse.json();
             console.log('All pets from API:', allPets);
-            
+
             // Filter to only favorited pets
             let favoritedPets = allPets.filter(pet => favoriteIds.includes(pet.id));
             console.log('Raw favorited pets:', favoritedPets);
-            
+
             // Process images using the same method as PetListingPage
             this.favoritePets = await this.processPetsWithImages(favoritedPets);
             console.log('Processed favorited pets with images:', this.favoritePets);
@@ -423,15 +429,15 @@ export default {
       try {
         const token = localStorage.getItem('authToken');
         console.log('Loading adoptions...');
-        
+
         // Try both endpoints
         const endpoints = [
           `${API_BASE_URL}/user/adoptions`,
           `${API_BASE_URL}/user/my-adoptions`
         ];
-        
+
         let adoptionsData = [];
-        
+
         for (const endpoint of endpoints) {
           try {
             console.log(`Trying endpoint: ${endpoint}`);
@@ -440,7 +446,7 @@ export default {
                 'Authorization': `Bearer ${token}`
               }
             });
-            
+
             if (response.ok) {
               adoptionsData = await response.json();
               console.log(`✅ Success from ${endpoint}:`, adoptionsData);
@@ -455,24 +461,24 @@ export default {
 
         if (adoptionsData && adoptionsData.length > 0) {
           console.log('Processing adoptions data:', adoptionsData);
-          
+
           // Extract pets from adoption records - handle different formats
           const processedAdoptions = await Promise.all(adoptionsData.map(async (adoption) => {
             // Handle different response formats
             const petData = adoption.pet || adoption.pets || adoption;
             const adoptionDate = adoption.adopted_at || adoption.adoption_date;
-            
+
             console.log('Processing adoption:', adoption, 'Pet data:', petData);
-            
+
             // Process the pet image using the same method as PetListingPage
             const processedPet = await this.processSinglePetWithImages(petData);
-            
+
             return {
               ...processedPet,
               adoption_date: adoptionDate
             };
           }));
-          
+
           this.adoptedPets = processedAdoptions;
           console.log('Final adopted pets:', this.adoptedPets);
         } else {
@@ -492,7 +498,7 @@ export default {
       const processedPets = pets.map(pet => {
         let displayImage = null;
         let imageSource = 'placeholder';
-        
+
         // Use the exact same logic as PetListingPage
         if (pet.main_image && pet.main_image.trim() !== '') {
           displayImage = pet.main_image;
@@ -522,7 +528,7 @@ export default {
     async processSinglePetWithImages(pet) {
       let displayImage = null;
       let imageSource = 'placeholder';
-      
+
       // Use the exact same logic as PetListingPage
       if (pet.main_image && pet.main_image.trim() !== '') {
         displayImage = pet.main_image;
@@ -756,20 +762,20 @@ export default {
       console.log('=== DEBUG ADOPTIONS ===');
       console.log('Current adoptedPets:', this.adoptedPets);
       console.log('Adopted pets length:', this.adoptedPets.length);
-      
+
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.log('No auth token found');
         return;
       }
-      
+
       // Test all endpoints
       const endpoints = [
         `${API_BASE_URL}/user/adoptions`,
         `${API_BASE_URL}/user/my-adoptions`,
         `${API_BASE_URL}/user/profile`
       ];
-      
+
       for (const endpoint of endpoints) {
         try {
           const response = await fetch(endpoint, {
@@ -798,7 +804,7 @@ export default {
         if (response.ok) {
           const quizData = await response.json();
           console.log('Quiz API response:', quizData); // Debug log
-          
+
           if (quizData.has_completed_quiz && quizData.profile) {
             this.userQuiz = quizData.profile;
           } else {
@@ -818,7 +824,7 @@ export default {
     async removeFavorite(pet) {
       try {
         const token = localStorage.getItem('authToken');
-        
+
         // Remove from favorites
         await fetch(`${API_BASE_URL}/user/favorites/${pet.id}`, {
           method: 'DELETE',
@@ -826,13 +832,14 @@ export default {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         // Remove from local array - this automatically updates the count
         this.favoritePets = this.favoritePets.filter(p => p.id !== pet.id);
-        
+        this.showToast("Removed from favorites", "success"); // Add this line
+
       } catch (error) {
         console.error('Error removing favorite:', error);
-        alert('Error removing favorite. Please try again.');
+        this.showToast("Failed to remove favorite. Please try again.", "error"); // Add this line
       }
     },
 
@@ -856,39 +863,39 @@ export default {
 
     formatQuizValue(value) {
       if (!value) return 'Not specified';
-      
+
       const formatMap = {
         // Living Space
         'apartment': 'Apartment/Condo',
         'house': 'House with Yard',
         'farm': 'Farm/Rural Area',
-        
+
         // Activity Level
         'low': 'Low Activity',
         'medium': 'Moderate Activity',
         'high': 'High Activity',
-        
+
         // Pet Type
         'dog': 'Dogs Only',
         'cat': 'Cats Only',
         'both': 'Open to Both',
-        
+
         // Experience Level
         'first_time': 'First-time Owner',
         'some_experience': 'Some Experience',
         'experienced': 'Experienced Owner',
-        
+
         // Home Environment
         'quiet': 'Quiet & Calm',
         'active': 'Moderately Active',
         'very_active': 'Very Active',
-        
+
         // Time Commitment
         'low': '0-4 Hours Alone',
         'medium': '4-8 Hours Alone',
         'high': '8+ Hours Alone'
       };
-      
+
       return formatMap[value] || value.toString().charAt(0).toUpperCase() + value.slice(1);
     },
 
@@ -900,7 +907,7 @@ export default {
       const typeColors = colors[pet.type] || colors.dog;
       const color = typeColors[pet.id % typeColors.length];
       const emoji = pet.type === 'dog' ? '🐕' : '🐱';
-      
+
       return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='250' viewBox='0 0 300 250'%3E%3Crect fill='${color}' width='300' height='250'/%3E%3Ctext fill='%23666' font-size='24' font-family='system-ui' x='150' y='125' text-anchor='middle' dominant-baseline='middle'%3E${emoji}%3C/text%3E%3Ctext fill='%23333' font-size='16' font-family='system-ui' x='150' y='160' text-anchor='middle'%3E${pet.name}%3C/text%3E%3C/svg%3E`;
     }
   }
@@ -1082,8 +1089,13 @@ export default {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .card-img-top {
@@ -1148,8 +1160,13 @@ export default {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1157,7 +1174,7 @@ export default {
     position: static;
     margin-bottom: 2rem;
   }
-  
+
   .profile-stats {
     grid-template-columns: 1fr;
   }
