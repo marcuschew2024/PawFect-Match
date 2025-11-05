@@ -4,7 +4,7 @@
       <!-- Back Button -->
       <div class="mb-4">
         <button @click="$router.back()" class="btn btn-outline-primary btn-back">
-          <i class="bi bi-arrow-left me-2"></i>Back to Pets
+          <i class="bi bi-arrow-left me-2"></i>Back
         </button>
       </div>
 

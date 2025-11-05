@@ -81,24 +81,62 @@
                 <div class="col-md-6 col-lg-4 mb-4" v-for="pet in favoritePets" :key="pet.id">
                   <div class="card h-100 pet-card">
                     <div class="position-relative">
-                      <img :src="getPetImage(pet)" 
+                      <img :src="pet.displayImage" 
                            :alt="pet.name"
                            class="card-img-top"
-                           @error="onImageError(pet)">
+                           :class="{ 'image-loaded': pet.imageLoaded }"
+                           @load="onImageLoad(pet)"
+                           @error="onImageError(pet)"
+                           loading="lazy">
                       
+                      <!-- Compatibility Badge -->
+                      <div v-if="pet.compatibility_score" class="compatibility-badge">
+                        {{ pet.compatibility_score }}% Match
+                      </div>
+
                       <!-- Favorite Button -->
-                      <button class="favorite-btn favorited" @click="removeFavorite(pet)">
+                      <!-- <button class="favorite-btn favorited" @click="removeFavorite(pet)">
                         <i class="bi bi-heart-fill"></i>
-                      </button>
+                      </button> -->
+
+                      <!-- Image Source Badge -->
+                      <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
+                        AI Generated Image
+                      </div>
+                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
+                        Real Image
+                      </div>
+
+                      <div v-if="!pet.imageLoaded" class="image-loading">
+                        <i class="bi bi-arrow-repeat spinner"></i>
+                      </div>
                     </div>
                     
                     <div class="card-body d-flex flex-column">
                       <h5 class="card-title">{{ pet.name }}</h5>
                       
+                      <!-- Compatibility Meter -->
+                      <div v-if="pet.compatibility_score" class="compatibility-meter mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                          <small class="text-muted">Compatibility</small>
+                          <small class="fw-bold text-muted">
+                            {{ pet.compatibility_score }}%
+                          </small>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                          <div class="progress-bar bg-primary" :style="{ width: pet.compatibility_score + '%' }"></div>
+                        </div>
+                      </div>
+                      
                       <p class="card-text mb-2 flex-grow-1">
-                        <strong>Breed:</strong> {{ pet.breed }}<br>
                         <strong>Age:</strong> {{ pet.age }}<br>
-                        <strong>Size:</strong> {{ pet.size }}
+                        <strong>Breed:</strong> {{ pet.breed }}<br>
+                        <strong>Size:</strong> {{ pet.size }}<br>
+                        <strong>Gender:</strong> {{ pet.gender }}<br>
+                        <strong>Activity:</strong>
+                        <span class="badge" :class="getActivityClass(pet.activity_level)">
+                          {{ pet.activity_level }}
+                        </span>
                       </p>
                       <p class="card-text personality">"{{ pet.personality }}"</p>
                     </div>
@@ -120,7 +158,6 @@
             <div v-if="activeTab === 'adoptions'" class="tab-content">
               <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3>My Adoptions</h3>
-                
               </div>
               
               <div v-if="adoptionsLoading" class="text-center">
@@ -143,10 +180,25 @@
                 <div class="col-md-6 col-lg-4 mb-4" v-for="pet in adoptedPets" :key="pet.id">
                   <div class="card h-100 pet-card">
                     <div class="position-relative">
-                      <img :src="getPetImage(pet)" 
+                      <img :src="pet.displayImage" 
                            :alt="pet.name"
                            class="card-img-top"
-                           @error="onImageError(pet)">
+                           :class="{ 'image-loaded': pet.imageLoaded }"
+                           @load="onImageLoad(pet)"
+                           @error="onImageError(pet)"
+                           loading="lazy">
+                      
+                      <!-- Image Source Badge -->
+                      <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
+                        AI Generated Image
+                      </div>
+                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
+                        Real Image
+                      </div>
+
+                      <div v-if="!pet.imageLoaded" class="image-loading">
+                        <i class="bi bi-arrow-repeat spinner"></i>
+                      </div>
                       
                       <!-- Adopted Badge -->
                       <div class="adoption-badge">
@@ -158,9 +210,10 @@
                       <h5 class="card-title">{{ pet.name }}</h5>
                       
                       <p class="card-text mb-2 flex-grow-1">
-                        <strong>Breed:</strong> {{ pet.breed }}<br>
                         <strong>Age:</strong> {{ pet.age }}<br>
+                        <strong>Breed:</strong> {{ pet.breed }}<br>
                         <strong>Size:</strong> {{ pet.size }}<br>
+                        <strong>Gender:</strong> {{ pet.gender }}<br>
                         <strong>Adopted:</strong> {{ formatDate(pet.adoption_date) }}
                       </p>
                       <p class="card-text personality">"{{ pet.personality }}"</p>
@@ -265,54 +318,57 @@ export default {
       adoptedPets: [],
       adoptionsLoading: false,
       userQuiz: null,
-      quizLoading: false
+      quizLoading: false,
+      imageCache: new Map(),
+      allDogBreeds: [],
+      allCatBreeds: []
     }
   },
   async mounted() {
-  await this.loadUserProfile();
-  
-  // Load both favorites and adoptions immediately
-  await Promise.all([
-    this.loadFavorites(),
-    this.loadAdoptions()
-  ]);
-  
-  this.activeTab = this.$route.query.tab || 'favorites';
-  
-  // Only load quiz results if the active tab is quiz
-  if (this.activeTab === 'quiz') {
-    await this.loadQuizResults();
-  }
-  
-  // Store reference for external access
-  window.profilePage = this;
-},
-  watch: {
-  activeTab(newTab) {
-    if (newTab === 'quiz') {
-      this.loadQuizResults();
+    await this.loadUserProfile();
+    await this.loadAllBreeds();
+    
+    // Load both favorites and adoptions immediately
+    await Promise.all([
+      this.loadFavorites(),
+      this.loadAdoptions()
+    ]);
+    
+    this.activeTab = this.$route.query.tab || 'favorites';
+    
+    // Only load quiz results if the active tab is quiz
+    if (this.activeTab === 'quiz') {
+      await this.loadQuizResults();
     }
-  }
-},
+    
+    // Store reference for external access
+    window.profilePage = this;
+  },
+  watch: {
+    activeTab(newTab) {
+      if (newTab === 'quiz') {
+        this.loadQuizResults();
+      }
+    }
+  },
   methods: {
     async loadUserProfile() {
-  try {
-    const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/user/profile`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/user/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-    if (response.ok) {
-      const profileData = await response.json();
-      this.user = profileData.user || {};
-      // Don't set userQuiz here - it will be loaded separately
-    }
-  } catch (error) {
-    console.error('Error loading user profile:', error);
-  }
-},
+        if (response.ok) {
+          const profileData = await response.json();
+          this.user = profileData.user || {};
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    },
 
     async loadFavorites() {
       this.favoritesLoading = true;
@@ -350,7 +406,7 @@ export default {
             let favoritedPets = allPets.filter(pet => favoriteIds.includes(pet.id));
             console.log('Raw favorited pets:', favoritedPets);
             
-            // Process images for ALL favorited pets
+            // Process images using the same method as PetListingPage
             this.favoritePets = await this.processPetsWithImages(favoritedPets);
             console.log('Processed favorited pets with images:', this.favoritePets);
           }
@@ -408,8 +464,8 @@ export default {
             
             console.log('Processing adoption:', adoption, 'Pet data:', petData);
             
-            // Process the pet image
-            const processedPet = await this.processPetWithImages(petData);
+            // Process the pet image using the same method as PetListingPage
+            const processedPet = await this.processSinglePetWithImages(petData);
             
             return {
               ...processedPet,
@@ -431,65 +487,262 @@ export default {
       }
     },
 
-    // Add image processing methods
+    // Image processing methods - EXACTLY like PetListingPage
     async processPetsWithImages(pets) {
-      const processedPets = await Promise.all(pets.map(async (pet) => {
-        return await this.processPetWithImages(pet);
-      }));
+      const processedPets = pets.map(pet => {
+        let displayImage = null;
+        let imageSource = 'placeholder';
+        
+        // Use the exact same logic as PetListingPage
+        if (pet.main_image && pet.main_image.trim() !== '') {
+          displayImage = pet.main_image;
+          imageSource = 'database';
+        } else if (pet.image && pet.image.trim() !== '') {
+          displayImage = pet.image;
+          imageSource = 'database';
+        } else {
+          displayImage = this.getColoredPlaceholder(pet);
+          imageSource = 'placeholder';
+        }
 
+        return {
+          ...pet,
+          displayImage: displayImage,
+          imageLoaded: false,
+          placeholderImage: imageSource === 'placeholder',
+          imageSource: imageSource
+        };
+      });
+
+      // Fetch API images for pets that need them (same as PetListingPage)
+      this.fetchApiImagesForPets(processedPets);
       return processedPets;
     },
 
-    async processPetWithImages(pet) {
-      let displayImage = '';
+    async processSinglePetWithImages(pet) {
+      let displayImage = null;
+      let imageSource = 'placeholder';
       
-      if (pet.image && pet.image.trim() !== '') {
+      // Use the exact same logic as PetListingPage
+      if (pet.main_image && pet.main_image.trim() !== '') {
+        displayImage = pet.main_image;
+        imageSource = 'database';
+      } else if (pet.image && pet.image.trim() !== '') {
         displayImage = pet.image;
+        imageSource = 'database';
       } else {
-        try {
-          // Try to get image from external API or use placeholder
-          const apiImage = await this.fetchPetImage(pet);
-          if (apiImage) {
-            displayImage = apiImage;
-          } else {
-            displayImage = this.getColoredPlaceholder(pet);
+        displayImage = this.getColoredPlaceholder(pet);
+        imageSource = 'placeholder';
+      }
+
+      const processedPet = {
+        ...pet,
+        displayImage: displayImage,
+        imageLoaded: false,
+        placeholderImage: imageSource === 'placeholder',
+        imageSource: imageSource
+      };
+
+      // Fetch API image if needed
+      if (processedPet.placeholderImage && processedPet.imageSource === 'placeholder') {
+        await this.fetchApiImageForSinglePet(processedPet);
+      }
+
+      return processedPet;
+    },
+
+    async fetchApiImagesForPets(pets) {
+      const petsNeedingImages = pets.filter(pet => pet.placeholderImage && pet.imageSource === 'placeholder');
+
+      const batchSize = 3;
+
+      for (let i = 0; i < petsNeedingImages.length; i += batchSize) {
+        const batch = petsNeedingImages.slice(i, i + batchSize);
+        const promises = batch.map(async (pet) => {
+          try {
+            const apiImage = await this.fetchPetImage(pet);
+            if (apiImage) {
+              pet.displayImage = apiImage;
+              pet.image = apiImage;
+              pet.placeholderImage = false;
+              pet.imageSource = 'api';
+
+              // Update the arrays to trigger reactivity
+              this.favoritePets = [...this.favoritePets];
+              this.adoptedPets = [...this.adoptedPets];
+            }
+          } catch (error) {
+            console.error(`Failed to fetch API image for ${pet.name}:`, error);
           }
-        } catch (error) {
-          console.error(`Error processing image for ${pet.name}:`, error);
-          displayImage = this.getColoredPlaceholder(pet);
+        });
+
+        await Promise.allSettled(promises);
+
+        if (i + batchSize < petsNeedingImages.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
-      
-      return {
-        ...pet,
-        image: displayImage // Update the image property
-      };
+    },
+
+    async fetchApiImageForSinglePet(pet) {
+      try {
+        const apiImage = await this.fetchPetImage(pet);
+        if (apiImage) {
+          pet.displayImage = apiImage;
+          pet.image = apiImage;
+          pet.placeholderImage = false;
+          pet.imageSource = 'api';
+
+          // Update the arrays to trigger reactivity
+          this.favoritePets = [...this.favoritePets];
+          this.adoptedPets = [...this.adoptedPets];
+        } else {
+          pet.displayImage = this.getColoredPlaceholder(pet);
+          pet.placeholderImage = false;
+        }
+      } catch (error) {
+        console.error(`Error fetching API image for ${pet.name}:`, error);
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
     },
 
     async fetchPetImage(pet) {
+      const cacheKey = `${pet.type}-${pet.breed}`;
+      if (this.imageCache.has(cacheKey)) {
+        return this.imageCache.get(cacheKey);
+      }
+
       try {
-        const apiUrl = pet.type === "dog" 
+        const breedId = this.findBreedId(pet.breed, pet.type);
+        const apiUrl = pet.type === "dog"
           ? `${API_BASE_URL}/external/dog-images`
           : `${API_BASE_URL}/external/cat-images`;
-        
+
         const params = new URLSearchParams({ limit: "1" });
-        
+        if (breedId) params.append("breed_id", breedId);
+
         const token = localStorage.getItem('authToken');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const response = await fetch(`${apiUrl}?${params}`, { headers });
-        
+
         if (!response.ok) throw new Error(`API error: ${response.status}`);
-        
+
         const data = await response.json();
         if (data && data.length > 0 && data[0].url) {
-          return data[0].url;
+          const imageUrl = data[0].url;
+          this.imageCache.set(cacheKey, imageUrl);
+          return imageUrl;
         }
         return "";
       } catch (error) {
         console.error(`Error fetching image for ${pet.name}:`, error);
         return "";
+      }
+    },
+
+    findBreedId(breedName, type) {
+      const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
+
+      if (!breeds.length) {
+        return null;
+      }
+
+      const normalizedBreedName = breedName.toLowerCase().trim();
+
+      let breed = breeds.find(b =>
+        b.name.toLowerCase().trim() === normalizedBreedName
+      );
+
+      if (breed) {
+        return breed.id;
+      }
+
+      breed = breeds.find(b => {
+        const apiName = b.name.toLowerCase().trim();
+        return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 4;
+      });
+
+      if (breed) {
+        return breed.id;
+      }
+
+      breed = breeds.find(b => {
+        const apiName = b.name.toLowerCase().trim();
+        return normalizedBreedName.includes(apiName) && apiName.length >= 4;
+      });
+
+      if (breed) {
+        return breed.id;
+      }
+
+      const breedWords = normalizedBreedName.split(/\s+/);
+      breed = breeds.find(b => {
+        const apiWords = b.name.toLowerCase().trim().split(/\s+/);
+        return breedWords.some(word =>
+          word.length >= 4 && apiWords.includes(word)
+        );
+      });
+
+      if (breed) {
+        return breed.id;
+      }
+
+      return null;
+    },
+
+    async loadAllBreeds() {
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const [dogResponse, catResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
+          fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
+        ]);
+
+        if (dogResponse.ok) {
+          this.allDogBreeds = await dogResponse.json();
+        }
+
+        if (catResponse.ok) {
+          this.allCatBreeds = await catResponse.json();
+        }
+
+      } catch (error) {
+        console.error("Error fetching breed lists:", error);
+      }
+    },
+
+    onImageLoad(pet) {
+      pet.imageLoaded = true;
+    },
+
+    onImageError(pet) {
+      if (pet.imageSource === 'database') {
+        pet.placeholderImage = true;
+        pet.imageSource = 'placeholder';
+        this.fetchApiImageForSinglePet(pet);
+      } else if (pet.imageSource === 'api') {
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      } else {
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
+
+      pet.imageLoaded = true;
+    },
+
+    getActivityClass(activity) {
+      switch (activity) {
+        case 'low': return 'bg-secondary';
+        case 'medium': return 'bg-warning';
+        case 'high': return 'bg-success';
+        default: return 'bg-info';
       }
     },
 
@@ -533,34 +786,34 @@ export default {
     },
 
     async loadQuizResults() {
-  this.quizLoading = true;
-  try {
-    const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/user/quiz`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+      this.quizLoading = true;
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/user/quiz`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-    if (response.ok) {
-      const quizData = await response.json();
-      console.log('Quiz API response:', quizData); // Debug log
-      
-      if (quizData.has_completed_quiz && quizData.profile) {
-        this.userQuiz = quizData.profile;
-      } else {
+        if (response.ok) {
+          const quizData = await response.json();
+          console.log('Quiz API response:', quizData); // Debug log
+          
+          if (quizData.has_completed_quiz && quizData.profile) {
+            this.userQuiz = quizData.profile;
+          } else {
+            this.userQuiz = null;
+          }
+        } else {
+          this.userQuiz = null;
+        }
+      } catch (error) {
+        console.error('Error loading quiz results:', error);
         this.userQuiz = null;
+      } finally {
+        this.quizLoading = false;
       }
-    } else {
-      this.userQuiz = null;
-    }
-  } catch (error) {
-    console.error('Error loading quiz results:', error);
-    this.userQuiz = null;
-  } finally {
-    this.quizLoading = false;
-  }
-},
+    },
 
     async removeFavorite(pet) {
       try {
@@ -637,17 +890,6 @@ export default {
       };
       
       return formatMap[value] || value.toString().charAt(0).toUpperCase() + value.slice(1);
-    },
-
-    getPetImage(pet) {
-      if (pet.image && pet.image.trim() !== '') {
-        return pet.image;
-      }
-      return this.getColoredPlaceholder(pet);
-    },
-
-    onImageError(pet) {
-      pet.image = this.getColoredPlaceholder(pet);
     },
 
     getColoredPlaceholder(pet) {
@@ -792,6 +1034,79 @@ export default {
   backdrop-filter: blur(10px);
 }
 
+.compatibility-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  z-index: 3;
+  border: 1px solid var(--border-light);
+  color: var(--text-dark);
+}
+
+.api-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: var(--text-light);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  z-index: 3;
+}
+
+.database-badge {
+  background-color: rgba(76, 175, 80, 0.95) !important;
+  color: white !important;
+}
+
+.image-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #666;
+  font-size: 1.5rem;
+  z-index: 2;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.card-img-top {
+  height: 200px;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.card-img-top:not(.image-loaded) {
+  opacity: 0;
+}
+
+.card-img-top.image-loaded {
+  opacity: 1;
+}
+
+.compatibility-meter {
+  background: var(--background-light);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--primary-pink);
+}
+
 .view-more-btn {
   background: var(--primary-pink);
   border: 2px solid var(--primary-pink);
@@ -835,5 +1150,16 @@ export default {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .profile-sidebar {
+    position: static;
+    margin-bottom: 2rem;
+  }
+  
+  .profile-stats {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
