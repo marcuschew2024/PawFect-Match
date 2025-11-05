@@ -1466,8 +1466,37 @@ def like_forum_answer(current_user, answer_id):
     except Exception as e:
         print(f"Error liking answer: {str(e)}")
         return jsonify({'error': str(e)}), 500
+    
+
+# Get user's question likes
+@app.route('/api/forum/question-likes/user', methods=['GET'])
+@token_required
+def get_user_question_likes(current_user):
+    try:
+        # Get all question likes for the current user
+        response = supabase.table('forum_question_likes').select('question_id, user_id').eq('user_id', current_user).execute()
+        
+        return jsonify(response.data if response.data else []), 200
+        
+    except Exception as e:
+        print(f"Error fetching user question likes: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Get user's answer likes
+@app.route('/api/forum/answer-likes/user', methods=['GET'])
+@token_required
+def get_user_answer_likes(current_user):
+    try:
+        # Get all answer likes for the current user
+        response = supabase.table('forum_answer_likes').select('answer_id, user_id').eq('user_id', current_user).execute()
+        
+        return jsonify(response.data if response.data else []), 200
+        
+    except Exception as e:
+        print(f"Error fetching user answer likes: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=3000)   
 
-# fix backend 
