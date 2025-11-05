@@ -345,7 +345,7 @@
               <div class="d-grid">
                 <button type="submit" class="btn btn-primary btn-lg" :disabled="loading || uploadedImages.length === 0">
                   <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  {{ loading ? 'Adding Pet...' : `Add Pet for Adoption (${uploadedImages.length} images)` }}
+                  {{ loading ? 'Adding Pet...' : `Add Pet for Adoption` }}
                 </button>
               </div>
             </form>
