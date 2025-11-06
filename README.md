@@ -2,8 +2,7 @@
 
 A full-stack pet adoption platform that helps users find their perfect furry companions. Built with Vue.js frontend and Flask Python backend with Supabase database.
 
-![PawFect Match](https://cdn-icons-png.flaticon.com/512/616/616430.png)
-
+<img src="https://cdn-icons-png.flaticon.com/512/616/616430.png" alt="PawFect Match" width="150">
 
 ## 🌐 Live Application 
 **Application URL:** https://pawfect-match-2025.web.app/
