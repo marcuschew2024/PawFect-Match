@@ -68,11 +68,11 @@
                     </div>
                   </div>
 
-                  <!-- Image Counter -->
+                  <!-- Image Counter
                   <div class="image-counter">
                     <i class="bi bi-camera me-1"></i>
                     {{ currentImageIndex + 1 }} / {{ validImages.length }}
-                  </div>
+                  </div> -->
                 </div>
 
                 <!-- Single Image -->
