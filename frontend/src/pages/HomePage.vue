@@ -603,6 +603,7 @@ export default {
     font-size: 2.5rem;
   }
 
+  
   .hero-section {
     min-height: auto;
     padding: 80px 0 40px;
