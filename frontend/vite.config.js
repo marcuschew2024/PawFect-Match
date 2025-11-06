@@ -21,5 +21,21 @@ export default defineConfig({
         changeOrigin: true
       }
     }
-  }
+  },
+  // add build configuration
+  build: {
+    outDir: 'dist',
+    // ensures cache-busting filenames
+    rollupOptions: {
+      output: {
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
+      }
+    },
+    // clear the output directory before building
+    emptyOutDir: true
+  },
+  // base public path for production
+  base: '/'
 })
