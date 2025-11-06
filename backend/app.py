@@ -20,7 +20,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
 
 # CORS configuration
-CORS(app)
+CORS(app, origins=["*"])  
 
 # Supabase configuration
 supabase_url = os.getenv('SUPABASE_URL')
@@ -1665,5 +1665,4 @@ def get_user_answer_likes(current_user):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=3000)   
-
+    app.run(debug=True, port=3000)  
