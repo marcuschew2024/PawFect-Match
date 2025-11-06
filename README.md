@@ -67,7 +67,9 @@ npm run dev
 ## 🔑 Login Credentials
 **Example**
 testaccount@gmail.com
+
 testaccount123
 
 adminaccount@gmail.com
+
 adminaccount123
