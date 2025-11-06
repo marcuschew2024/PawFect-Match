@@ -64,3 +64,8 @@ npm install
 
 npm run dev
 ```
+
+## 🔑 Login Credentials
+**Example**
+- Username: syakira.sulaiman@gmail.com
+- Password: syakira13
