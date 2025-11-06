@@ -5,9 +5,8 @@ A full-stack pet adoption platform that helps users find their perfect furry com
 ![PawFect Match](https://cdn-icons-png.flaticon.com/512/616/616430.png)
 
 
-## Live Application 
+## 🌐 Live Application 
 **Application URL:** https://pawfect-match-2025.web.app/
-
 **Git Repository:** https://github.com/marcuschew2024/PawFect-Match.git
 
 
