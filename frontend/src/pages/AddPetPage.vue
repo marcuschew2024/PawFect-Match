@@ -87,7 +87,7 @@
               <!-- Image Upload -->
               <div class="form-section mb-4">
                 <h4 class="section-title">Pet Images</h4>
-                <p class="text-muted mb-3">Upload multiple images (up to 5). The first image will be used as the main photo.</p>
+                <p class="text-muted mb-3">Upload multiple images (up to 5). The first image will be used as the main photo. <strong class="text-primary">Images are optional but recommended.</strong></p>
                 
                 <!-- File Upload -->
                 <div class="mb-3">
@@ -136,6 +136,12 @@
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <!-- No Images Message -->
+                <div v-if="uploadedImages.length === 0" class="alert alert-info mt-3">
+                  <i class="bi bi-info-circle me-2"></i>
+                  No images added. Pets with photos are more likely to be adopted!
                 </div>
               </div>
 
@@ -339,7 +345,7 @@
 
               <!-- Submit Button -->
               <div class="d-grid">
-                <button type="submit" class="btn btn-primary btn-lg" :disabled="loading || uploadedImages.length === 0">
+                <button type="submit" class="btn btn-primary btn-lg" :disabled="loading">
                   <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                   {{ loading ? 'Adding Pet...' : `Add Pet for Adoption` }}
                 </button>
@@ -485,10 +491,11 @@ export default {
         return;
       }
 
-      if (this.uploadedImages.length === 0) {
-        this.error = 'Please add at least one image of the pet';
-        return;
-      }
+      // REMOVED: Image upload validation - now optional
+      // if (this.uploadedImages.length === 0) {
+      //   this.error = 'Please add at least one image of the pet';
+      //   return;
+      // }
 
       this.loading = true;
       this.error = null;
@@ -507,27 +514,31 @@ export default {
         // Convert age to string format
         const ageString = this.formatAgeDisplay();
 
-        // Convert file images to base64 URLs
+        // Convert file images to base64 URLs (only if images exist)
         const imageUrls = [];
         
-        console.log(`🖼️ Processing ${this.uploadedImages.length} uploaded images:`);
-        
-        for (const image of this.uploadedImages) {
-          if (image.type === 'file') {
-            console.log(`📁 Converting file: ${image.file.name}`);
-            // Convert file to base64
-            const base64Url = await this.fileToBase64(image.file);
-            imageUrls.push(base64Url);
-            console.log(`✅ Converted to base64, length: ${base64Url.length}`);
-          } else {
-            // Use URL directly
-            console.log(`🌐 Using URL: ${image.url}`);
-            imageUrls.push(image.url);
+        if (this.uploadedImages.length > 0) {
+          console.log(`🖼️ Processing ${this.uploadedImages.length} uploaded images:`);
+          
+          for (const image of this.uploadedImages) {
+            if (image.type === 'file') {
+              console.log(`📁 Converting file: ${image.file.name}`);
+              // Convert file to base64
+              const base64Url = await this.fileToBase64(image.file);
+              imageUrls.push(base64Url);
+              console.log(`✅ Converted to base64, length: ${base64Url.length}`);
+            } else {
+              // Use URL directly
+              console.log(`🌐 Using URL: ${image.url}`);
+              imageUrls.push(image.url);
+            }
           }
-        }
 
-        console.log(`🎯 Final image URLs to send: ${imageUrls.length}`);
-        console.log('📤 First image preview:', imageUrls[0]?.substring(0, 100) + '...');
+          console.log(`🎯 Final image URLs to send: ${imageUrls.length}`);
+          console.log('📤 First image preview:', imageUrls[0]?.substring(0, 100) + '...');
+        } else {
+          console.log('ℹ️ No images uploaded - proceeding without images');
+        }
 
         // Prepare the data - map field names to match database
         const submissionData = {
@@ -550,12 +561,13 @@ export default {
           vaccinated: this.form.vaccinated,
           neutered: this.form.neutered,
           hdb_approved: this.form.hdb_approved,
-          images: imageUrls
+          images: imageUrls // This will be empty array if no images
         };
 
         console.log('📦 Submission data prepared, sending to backend...');
         console.log('🐕 Breed:', submissionData.breed);
         console.log('📅 Age:', submissionData.age);
+        console.log('🖼️ Images count:', submissionData.images.length);
 
         const response = await fetch('http://localhost:3000/api/pets', {
           method: 'POST',
@@ -574,7 +586,8 @@ export default {
           console.log('📸 New pet images:', newPet.images);
           console.log('🔢 Number of images in response:', newPet.images ? newPet.images.length : 0);
           
-          this.success = `Successfully added ${newPet.name} for adoption with ${this.uploadedImages.length} images!`;
+          const imageCount = this.uploadedImages.length;
+          this.success = `Successfully added ${newPet.name} for adoption${imageCount > 0 ? ` with ${imageCount} image${imageCount > 1 ? 's' : ''}` : ''}!`;
           this.resetForm();
           
           setTimeout(() => {
