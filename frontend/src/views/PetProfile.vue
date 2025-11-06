@@ -109,11 +109,26 @@
                 </div>
 
                 <!-- Adoption Status Badge -->
-                <div v-if="pet.is_adopted" class="status-badge adopted">
+                <!-- <div v-if="pet.is_adopted" class="status-badge adopted">
                   <i class="bi bi-check-circle me-1"></i>Adopted
                 </div>
                 <div v-else class="status-badge available">
                   <i class="bi bi-heart me-1"></i>Available
+                </div> -->
+                <!-- Status Badge -->
+                <div class="mb-4">
+                  <span v-if="!pet.approved" class="status-badge pending">
+                    <i class="bi bi-clock me-1"></i>Pending Approval
+                  </span>
+                  <span v-else-if="pet.is_adopted" class="status-badge adopted">
+                    <i class="bi bi-check-circle me-1"></i>Adopted
+                  </span>
+                  <span v-else-if="pet.has_pending_application" class="status-badge pending-adoption">
+                    <i class="bi bi-hourglass-split me-1"></i>Pending Adoption
+                  </span>
+                  <span v-else class="status-badge available">
+                    <i class="bi bi-heart me-1"></i>Available
+                  </span>
                 </div>
               </div>
 
@@ -156,26 +171,52 @@
                 <!-- Action Buttons -->
                 <div class="action-buttons mt-4">
                   <div class="d-grid gap-2">
-                    <!-- Adopt Button -->
-                    <button v-if="isAuthenticated && !pet.is_adopted" class="btn btn-adopt btn-lg py-3"
-                      @click="startAdoption" :disabled="adopting">
+                    <!-- Adopt Button - Only show if approved, not adopted, and no pending applications -->
+                    <button v-if="isAuthenticated && pet.approved && !pet.is_adopted && !pet.has_pending_application"
+                      class="btn btn-adopt btn-lg py-3" @click="startAdoption" :disabled="adopting">
                       <span v-if="adopting" class="spinner-border spinner-border-sm me-2"></span>
                       <i v-else class="bi bi-heart me-2"></i>
                       {{ adopting ? "Processing..." : `Adopt ${pet.name}` }}
                     </button>
 
-                    <!-- Login to Adopt -->
-                    <button v-else-if="!isAuthenticated && !pet.is_adopted" class="btn btn-adopt btn-lg py-3"
-                      @click="$router.push('/login')">
-                      <i class="bi bi-person me-2"></i>Login to Adopt
-                    </button>
+                    <!-- Your Application is Pending - Show if current user applied -->
+                    <div v-else-if="pet.user_has_pending_application" class="your-pending-message text-center py-3">
+                      <i class="bi bi-check2-circle text-info display-6 mb-3"></i>
+                      <h5 class="text-info">Your Application is Pending</h5>
+                      <p class="text-muted mb-0">Your adoption application for {{ pet.name }} is awaiting admin
+                        approval. We'll notify you once a decision is made!</p>
+                    </div>
+
+                    <!-- Pending Adoption Message - Show if someone else applied -->
+                    <div v-else-if="pet.has_pending_application && !pet.user_has_pending_application"
+                      class="pending-adoption-message text-center py-3">
+                      <i class="bi bi-hourglass-split text-warning display-6 mb-3"></i>
+                      <h5 class="text-warning">Adoption Pending</h5>
+                      <p class="text-muted mb-0">This pet has a pending adoption application awaiting admin approval.
+                      </p>
+                    </div>
+
+                    <!-- Pending Approval Message -->
+                    <div v-else-if="!pet.approved" class="pending-approval-message text-center py-3">
+                      <i class="bi bi-clock text-warning display-6 mb-3"></i>
+                      <h5 class="text-warning">Pending Approval</h5>
+                      <p class="text-muted mb-0">This pet listing is awaiting admin approval before adoption can
+                        proceed.</p>
+                    </div>
 
                     <!-- Already Adopted -->
-                    <div v-else class="adopted-message text-center py-3">
+                    <div v-else-if="pet.is_adopted" class="adopted-message text-center py-3">
                       <i class="bi bi-check-circle-fill text-success display-6 mb-3"></i>
                       <h5 class="text-success">Congratulations!</h5>
                       <p class="text-muted mb-0">This pet has found a loving home!</p>
                     </div>
+
+                    <!-- Login to Adopt -->
+                    <button
+                      v-else-if="!isAuthenticated && pet.approved && !pet.is_adopted && !pet.has_pending_application"
+                      class="btn btn-adopt btn-lg py-3" @click="$router.push('/login')">
+                      <i class="bi bi-person me-2"></i>Login to Adopt
+                    </button>
                   </div>
                 </div>
               </div>
@@ -667,60 +708,67 @@ export default {
     },
 
     async preCheckImages() {
-      if (!this.pet.images || this.pet.images.length === 0) {
-        this.validImages = [this.getColoredPlaceholder(this.pet)];
-        this.imageLoadedStates[this.validImages[0]] = true;
-        return;
-      }
+  if (!this.pet.images || this.pet.images.length === 0) {
+    console.log('🔄 No database images, trying API...');
+    await this.fetchApiImageForPet();
+    return;
+  }
 
-      const allImages = this.pet.images.map(img => {
-        if (typeof img === 'object' && img.image_url) {
-          return img.image_url;
-        } else if (typeof img === 'string') {
-          return img;
-        }
-        return null;
-      }).filter(url => url !== null && url.trim() !== '');
+  const allImages = this.pet.images.map(img => {
+    if (typeof img === 'object' && img.image_url) {
+      return img.image_url;
+    } else if (typeof img === 'string') {
+      return img;
+    }
+    return null;
+  }).filter(url => url !== null && url.trim() !== '');
 
-      this.totalDatabaseImages = allImages.length;
-      this.placeholderImage = this.getColoredPlaceholder(this.pet);
+  this.totalDatabaseImages = allImages.length;
+  this.placeholderImage = this.getColoredPlaceholder(this.pet);
 
-      // Pre-check each image to see if it loads successfully
-      const checkPromises = allImages.map(async (img) => {
-        return new Promise((resolve) => {
-          const image = new Image();
-          image.onload = () => {
-            console.log('✅ Image pre-check passed:', img);
-            resolve({ url: img, valid: true });
-          };
-          image.onerror = () => {
-            console.log('❌ Image pre-check failed:', img);
-            resolve({ url: img, valid: false });
-          };
-          image.src = img;
-        });
+  // If we have database images, pre-check them
+  if (allImages.length > 0) {
+    // Pre-check each image to see if it loads successfully
+    const checkPromises = allImages.map(async (img) => {
+      return new Promise((resolve) => {
+        const image = new Image();
+        image.onload = () => {
+          console.log('✅ Image pre-check passed:', img);
+          resolve({ url: img, valid: true });
+        };
+        image.onerror = () => {
+          console.log('❌ Image pre-check failed:', img);
+          resolve({ url: img, valid: false });
+        };
+        image.src = img;
       });
+    });
 
-      const results = await Promise.all(checkPromises);
+    const results = await Promise.all(checkPromises);
 
-      // Only keep valid images
-      this.validImages = results
-        .filter(result => result.valid)
-        .map(result => result.url);
+    // Only keep valid images
+    this.validImages = results
+      .filter(result => result.valid)
+      .map(result => result.url);
 
-      console.log(`🎯 After pre-check: ${this.validImages.length} valid images out of ${allImages.length}`);
+    console.log(`🎯 After pre-check: ${this.validImages.length} valid images out of ${allImages.length}`);
 
-      // If no valid database images, try API
-      if (this.validImages.length === 0 && this.pet.imageSource === 'database') {
-        console.log('🔄 No valid database images found, trying API...');
-        await this.fetchApiImageForPet();
-      } else {
-        // Initialize image loaded states for valid images
-        this.validImages.forEach(img => {
-          this.imageLoadedStates[img] = false;
-        });
-      }
-    },
+    // If no valid database images, try API
+    if (this.validImages.length === 0) {
+      console.log('🔄 No valid database images found, trying API...');
+      await this.fetchApiImageForPet();
+    } else {
+      // Initialize image loaded states for valid images
+      this.validImages.forEach(img => {
+        this.imageLoadedStates[img] = false;
+      });
+    }
+  } else {
+    // No database images at all, try API
+    console.log('🔄 No database images available, trying API...');
+    await this.fetchApiImageForPet();
+  }
+},
 
     processPetWithImages(pet) {
       console.log("🖼 Processing images for pet:", pet.name);
@@ -803,14 +851,8 @@ export default {
       );
 
       // If no valid images left and we haven't already fetched from API, try API
-      const shouldFetchFromAPI = this.validImages.length === 0 &&
-        !this.apiFetchInProgress &&
-        !this.databaseImagesChecked &&
-        this.pet.imageSource === 'database';
-
-      if (shouldFetchFromAPI) {
-        console.log('🔄 All images failed during display, trying API...');
-        this.databaseImagesChecked = true;
+      if (this.validImages.length === 0 && !this.apiFetchInProgress) {
+        console.log('🔄 All database images failed, trying API...');
         await this.fetchApiImageForPet();
       }
 
@@ -1091,6 +1133,12 @@ export default {
         return;
       }
 
+      // Check if pet is approved
+      if (!this.pet.approved) {
+        this.showToast("This pet is pending approval and cannot be adopted yet.", "warning");
+        return;
+      }
+
       if (this.pet.is_adopted) {
         this.showToast("This pet has already been adopted!", "error");
         return;
@@ -1184,6 +1232,19 @@ export default {
 
 
 <style scoped>
+/* Add to your existing status badge styles */
+.status-badge.pending {
+  background: linear-gradient(135deg, #ffc107, #ffd54f);
+  color: #212529;
+}
+
+.pending-approval-message {
+  padding: 2rem 1rem;
+  background: #fff3cd;
+  border-radius: 15px;
+  border: 1px solid #ffeaa7;
+}
+
 .background-details-content {
   margin-top: 1rem;
 }
@@ -1486,6 +1547,40 @@ export default {
 .status-badge.adopted {
   background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
   color: white;
+}
+
+.status-badge.pending-adoption {
+  background: linear-gradient(135deg, #ffc107, #ff9800);
+  color: white;
+}
+
+.status-badge.pending {
+  background: linear-gradient(135deg, #6c757d, #95a5a6);
+  color: white;
+}
+
+/* Pending messages */
+.pending-adoption-message,
+.your-pending-message,
+.pending-approval-message {
+  padding: 2rem 1rem;
+  border-radius: 15px;
+  border: 2px solid;
+}
+
+.pending-adoption-message {
+  background: linear-gradient(135deg, #fff3cd, #fff9e6);
+  border-color: #ffc107;
+}
+
+.your-pending-message {
+  background: linear-gradient(135deg, #d1ecf1, #e7f5f8);
+  border-color: #17a2b8;
+}
+
+.pending-approval-message {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-color: #6c757d;
 }
 
 /* Image Source Badges - Keep at top right */
