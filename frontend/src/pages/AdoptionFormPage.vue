@@ -677,7 +677,7 @@ export default {
               this.existingStatus = 'rejected';
               this.error = `Your previous application for ${this.pet.name} was rejected. You can't submit another application for this pet.`;
             } else {
-              this.error = `You've already submitted an application for ${this.pet.name}.`;
+              this.error = `You are not eligble to apply for ${this.pet.name} again.`;
             }
             return;
           }
