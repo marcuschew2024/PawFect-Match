@@ -42,7 +42,7 @@
 
                 <li class="nav-item">
                   <a class="nav-link" :class="{ active: activeTab === 'applications' }"
-                     @click="goToTab('applications')">
+                    @click="goToTab('applications')">
                     <i class="bi bi-file-text me-2"></i>My Applications
                   </a>
                 </li>
@@ -91,14 +91,15 @@
                   <div class="card h-100 pet-card">
                     <div class="position-relative">
                       <img :src="pet.displayImage" :alt="pet.name" class="card-img-top"
-                           :class="{ 'image-loaded': pet.imageLoaded }"
-                           @load="onImageLoad(pet)" @error="onImageError(pet)" loading="lazy">
+                        :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
+                        loading="lazy">
 
                       <!-- Image Source Badge -->
                       <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
                         AI Generated Image
                       </div>
-                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded" class="api-badge database-badge">
+                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded"
+                        class="api-badge database-badge">
                         Real Image
                       </div>
 
@@ -163,9 +164,8 @@
                   <div class="card h-100 pet-card">
                     <div class="position-relative">
                       <img :src="getPetImage(adoption)" :alt="getPetName(adoption)" class="card-img-top"
-                           :class="{ 'image-loaded': getPetImageLoaded(adoption) }"
-                           @load="onAdoptionImageLoad(adoption)"
-                           @error="onAdoptionImageError(adoption)" loading="lazy">
+                        :class="{ 'image-loaded': getPetImageLoaded(adoption) }" @load="onAdoptionImageLoad(adoption)"
+                        @error="onAdoptionImageError(adoption)" loading="lazy">
 
                       <div class="adoption-badge">
                         <i class="bi bi-check-circle me-1"></i>Adopted
@@ -237,10 +237,10 @@
                             <div class="col-md-3">
                               <div class="position-relative">
                                 <img :src="getPetImage(application)" :alt="getPetName(application)"
-                                     class="img-fluid rounded" style="height: 120px; width: 100%; object-fit: cover;"
-                                     :class="{ 'image-loaded': getPetImageLoaded(application) }"
-                                     @load="onApplicationImageLoad(application)"
-                                     @error="onApplicationImageError(application)">
+                                  class="img-fluid rounded" style="height: 120px; width: 100%; object-fit: cover;"
+                                  :class="{ 'image-loaded': getPetImageLoaded(application) }"
+                                  @load="onApplicationImageLoad(application)"
+                                  @error="onApplicationImageError(application)">
                               </div>
                             </div>
                             <div class="col-md-6">
@@ -278,10 +278,10 @@
                             <div class="col-md-3">
                               <div class="position-relative">
                                 <img :src="getPetImage(application)" :alt="getPetName(application)"
-                                     class="img-fluid rounded" style="height: 120px; width: 100%; object-fit: cover;"
-                                     :class="{ 'image-loaded': getPetImageLoaded(application) }"
-                                     @load="onApplicationImageLoad(application)"
-                                     @error="onApplicationImageError(application)">
+                                  class="img-fluid rounded" style="height: 120px; width: 100%; object-fit: cover;"
+                                  :class="{ 'image-loaded': getPetImageLoaded(application) }"
+                                  @load="onApplicationImageLoad(application)"
+                                  @error="onApplicationImageError(application)">
                               </div>
                             </div>
                             <div class="col-md-6">
@@ -432,7 +432,7 @@ export default {
     // Set active tab from URL or default to 'favorites'
     const tabFromUrl = this.$route.query.tab;
     this.activeTab = tabFromUrl || 'favorites';
-    
+
     // If no tab in URL, set it to favorites and update URL
     if (!tabFromUrl) {
       this.$router.replace({ query: { ...this.$route.query, tab: 'favorites' } });
@@ -652,6 +652,8 @@ export default {
       }
     },
 
+
+
     async loadQuizResults() {
       this.quizLoading = true;
       try {
@@ -662,7 +664,13 @@ export default {
 
         if (response.ok) {
           const quizData = await response.json();
-          this.userQuiz = quizData.quiz || null;
+          // FIX: The quiz data is in 'profile', not 'quiz'
+          if (quizData.has_completed_quiz && quizData.profile) {
+            this.userQuiz = quizData.profile;
+            console.log('Quiz data loaded:', this.userQuiz);
+          } else {
+            this.userQuiz = null;
+          }
         } else if (response.status === 404) {
           this.userQuiz = null;
         }
@@ -1121,7 +1129,8 @@ export default {
   transition: all 0.3s ease;
   min-width: 0;
   overflow: hidden;
-  flex: 1; /* equal widths */
+  flex: 1;
+  /* equal widths */
 }
 
 .stat-item:hover {
@@ -1246,8 +1255,13 @@ export default {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .card-img-top {
@@ -1256,8 +1270,13 @@ export default {
   transition: opacity 0.3s ease;
 }
 
-.card-img-top:not(.image-loaded) { opacity: 0; }
-.card-img-top.image-loaded      { opacity: 1; }
+.card-img-top:not(.image-loaded) {
+  opacity: 0;
+}
+
+.card-img-top.image-loaded {
+  opacity: 1;
+}
 
 /* Favorite Button - bottom right */
 .favorite-btn {
@@ -1314,10 +1333,23 @@ export default {
   border-left: 3px solid var(--primary-pink);
 }
 
-.quiz-summary { border-left: 4px solid var(--primary-pink); }
+.quiz-summary {
+  border-left: 4px solid var(--primary-pink);
+}
 
-.tab-content { animation: fadeIn 0.3s ease; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.tab-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
 
 /* Application Card */
 .application-card {
@@ -1326,6 +1358,7 @@ export default {
   transition: all 0.3s ease;
   box-shadow: var(--shadow-light);
 }
+
 .application-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-medium);
@@ -1334,6 +1367,7 @@ export default {
 .pending-application {
   border-left: 4px solid #ffc107;
 }
+
 .pending-application:hover {
   border-left-color: #ff9800;
 }
@@ -1342,6 +1376,7 @@ export default {
   border-left: 4px solid #dc3545;
   background-color: #fff5f5;
 }
+
 .rejected-application:hover {
   border-left-color: #c82333;
   background-color: #ffe6e6;
@@ -1359,21 +1394,32 @@ export default {
   border-bottom: 1px solid #dee2e6;
   padding: 1rem 1.25rem;
 }
-.list-group-item:last-child { border-bottom: none; }
+
+.list-group-item:last-child {
+  border-bottom: none;
+}
 
 @media (max-width: 768px) {
   .profile-sidebar {
     position: static;
     margin-bottom: 2rem;
   }
+
   .profile-stats {
     gap: 0.5rem;
   }
+
   .stat-item {
     padding: 0.75rem 0.5rem !important;
   }
-  .stat-number { font-size: 1.5rem; }
-  .stat-label  { font-size: 0.7rem; }
+
+  .stat-number {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1381,6 +1427,7 @@ export default {
     flex-wrap: wrap;
     gap: 0.75rem;
   }
+
   .stat-item {
     flex: 1 1 calc(50% - 0.75rem);
   }
