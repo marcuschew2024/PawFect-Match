@@ -550,7 +550,9 @@
 </template>
 
 <script>
-const API_BASE_URL = 'http://localhost:3000/api';
+import { getApiBaseUrl } from '@/utils/config';
+const API_BASE_URL = getApiBaseUrl();
+//const API_BASE_URL = 'http://localhost:3000/api';
 
 export default {
   name: "PetProfile",

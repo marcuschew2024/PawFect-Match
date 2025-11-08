@@ -82,6 +82,19 @@ def compress_image(image_data, max_size=(1200, 1200), quality=85):
         print(f"Image compression error: {e}")
         return image_data  # Return original if compression fails
 
+@app.route('/')
+def root():
+    return jsonify({
+        "message": "Pawfect Match Backend API",
+        "status": "online",
+        "endpoints": {
+            "health": "/api/health",
+            "pets": "/api/pets",
+            "dog_breeds": "/api/external/dog-breeds",
+            "cat_breeds": "/api/external/cat-breeds"
+        }
+    })
+
 # AUTH ROUTES
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
@@ -2073,9 +2086,6 @@ def get_user_answer_likes(current_user):
         print(f"Error fetching user answer likes: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(debug=True, port=3000)   
-
 # Add this route to create an admin account
 @app.route('/api/admin/create-admin', methods=['POST'])
 def create_admin_account():
@@ -2141,3 +2151,7 @@ def create_admin_account():
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 3000))
+    app.run(host='0.0.0.0', port=port)
