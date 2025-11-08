@@ -13,7 +13,6 @@ from io import BytesIO
 from PIL import Image
 import uuid
 
-
 load_dotenv()
 
 app = Flask(__name__)
@@ -129,13 +128,14 @@ def signup():
                 'exp': datetime.now(timezone.utc) + timedelta(days=7)
             }, app.config['SECRET_KEY'], algorithm='HS256')
             
-            # Remove password hash from response
+            # Remove password hash from response - INCLUDE is_admin
             user_response = {
                 'id': user['id'],
                 'email': user['email'],
                 'full_name': user['full_name'],
                 'phone': user['phone'],
-                'address': user['address']
+                'address': user['address'],
+                'is_admin': user.get('is_admin', False)  # ADD THIS LINE
             }
             
             return jsonify({
@@ -160,7 +160,7 @@ def login():
         email = data['email']
         password = data['password']
         
-        # Get user from database
+        # Get user from database - INCLUDE is_admin field
         response = supabase.table('users').select('*').eq('email', email).execute()
         
         if not response.data:
@@ -179,13 +179,14 @@ def login():
             'exp': datetime.now(timezone.utc) + timedelta(days=7)
         }, app.config['SECRET_KEY'], algorithm='HS256')
         
-        # Remove password hash from response
+        # Remove password hash from response - INCLUDE is_admin
         user_data = {
             'id': user['id'],
             'email': user['email'],
             'full_name': user['full_name'],
             'phone': user['phone'],
-            'address': user['address']
+            'address': user['address'],
+            'is_admin': user.get('is_admin', False)  # ADD THIS LINE
         }
         
         return jsonify({
@@ -309,14 +310,28 @@ def update_pet(pet_id):
 # PET ROUTES - UPDATED TO FILTER ADOPTED PETS
 # PET ROUTES - UPDATED TO FILTER ADOPTED PETS
 # PET ROUTES - UPDATED FOR MULTIPLE IMAGES
+# PET ROUTES - Only show approved pets to regular users
 @app.route('/api/pets', methods=['GET'])
 def get_pets():
     try:
-        # Get pets with their images
+        # Check if user is authenticated (optional)
+        token = request.headers.get('Authorization')
+        current_user = None
+        
+        if token:
+            try:
+                if token.startswith('Bearer '):
+                    token = token[7:]
+                data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+                current_user = data['user_id']
+            except:
+                pass  # User not authenticated, that's okay
+        
+        # Get pets with their images - ONLY APPROVED PETS
         response = supabase.table('pets').select('''
             *,
             pet_images(*)
-        ''').eq('available', True).execute()
+        ''').eq('available', True).eq('approved', True).execute()  # Added approved=True
         
         if response.data:
             # Filter out adopted pets and format response
@@ -346,6 +361,9 @@ def get_pets():
                 if 'pet_images' in pet_response:
                     del pet_response['pet_images']
                 
+                # Add application status
+                pet_response = get_pet_with_application_status(pet_response, current_user)
+                
                 available_pets.append(pet_response)
             
             return jsonify(available_pets)
@@ -360,6 +378,19 @@ def get_pets():
 def get_pet(pet_id):
     try:
         print(f"🔍 Fetching pet with ID: {pet_id}")
+        
+        # Check if user is authenticated (optional)
+        token = request.headers.get('Authorization')
+        current_user = None
+        
+        if token:
+            try:
+                if token.startswith('Bearer '):
+                    token = token[7:]
+                data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+                current_user = data['user_id']
+            except:
+                pass  # User not authenticated, that's okay
         
         # Get pet data
         pet_response = supabase.table('pets').select('*').eq('id', pet_id).execute()
@@ -382,6 +413,9 @@ def get_pet(pet_id):
             'images': images_array,
             'main_image': pet_data.get('main_image') or (images_array[0]['image_url'] if images_array else None)
         }
+        
+        # Add application status
+        pet_response = get_pet_with_application_status(pet_response, current_user)
         
         print(f"✅ Final pet response with {len(images_array)} images")
         return jsonify(pet_response)
@@ -406,30 +440,33 @@ def create_pet():
                 return jsonify({'error': f'Missing required field: {field}'}), 400
         
         # Create pet data for Supabase
+        # In your create_pet route, make sure new pets are not approved by default
         pet_data = {
-            'name': data.get('name'),
-            'type': data.get('type'),
-            'breed': data.get('breed'),
-            'age': data.get('age'),
-            'size': data.get('size'),
-            'gender': data.get('gender'),
-            'personality': data.get('personality'),
-            'activity_level': data.get('activity_level', 'medium'),
-            'fur_color': data.get('fur_color', ''),
-            'vaccination_status': data.get('vaccination_status', 'Unknown'),
-            'adoption_fee': data.get('adoption_fee', 0),
-            'health_info': data.get('health_info', ''),
-            'location': data.get('location', 'Singapore'),
-            'available': True,
-            'is_adopted': False,
-            'created_at': datetime.now(timezone.utc).isoformat(),
-            'background': data.get('background', ''),
-            'good_with_children': data.get('good_with_children'),
-            'good_with_other_pets': data.get('good_with_other_pets'),
-            'vaccinated': data.get('vaccinated'),
-            'neutered': data.get('neutered'),
-            'hdb_approved': data.get('hdb_approved', False)
-        }
+    'name': data.get('name'),
+    'type': data.get('type'),
+    'breed': data.get('breed'),
+    'age': data.get('age'),
+    'size': data.get('size'),
+    'gender': data.get('gender'),
+    'personality': data.get('personality'),
+    'activity_level': data.get('activity_level', 'medium'),
+    'fur_color': data.get('fur_color', ''),
+    'vaccination_status': data.get('vaccination_status', 'Unknown'),
+    'adoption_fee': data.get('adoption_fee', 0),
+    'health_info': data.get('health_info', ''),
+    'location': data.get('location', 'Singapore'),
+    'available': True,
+    'approved': False,  # New pets start as unapproved
+    'is_adopted': False,
+    'created_at': datetime.now(timezone.utc).isoformat(),
+    'background': data.get('background', ''),
+    'good_with_children': data.get('good_with_children'),
+    'good_with_other_pets': data.get('good_with_other_pets'),
+    'vaccinated': data.get('vaccinated'),
+    'neutered': data.get('neutered'),
+    'hdb_approved': data.get('hdb_approved', False)
+}
+        
         
         print(f"🐕 Pet data prepared, inserting into database...")
         
@@ -639,6 +676,9 @@ def get_pets_with_scores(current_user):
             if 'pet_images' in pet_response:
                 del pet_response['pet_images']
             
+            # Add application status
+            pet_response = get_pet_with_application_status(pet_response, current_user)
+            
             pets_with_scores.append(pet_response)
         
         # Sort by compatibility score (highest first)
@@ -650,13 +690,13 @@ def get_pets_with_scores(current_user):
         return jsonify({'error': str(e)}), 500
 
 # ADOPTION ROUTES
-# ADOPTION ROUTES
+# Update the existing adoption route to create pending applications
 @app.route('/api/adopt/<int:pet_id>', methods=['POST'])
 @token_required
 def adopt_pet(current_user, pet_id):
     try:
         data = request.get_json()
-        print(f"🚀 Adoption request from user {current_user} for pet {pet_id}")
+        print(f"🚀 Adoption application request from user {current_user} for pet {pet_id}")
         
         # 1. Check if pet exists
         pet_response = supabase.table('pets').select('*').eq('id', pet_id).execute()
@@ -666,64 +706,76 @@ def adopt_pet(current_user, pet_id):
         
         pet = pet_response.data[0]
         
-        # 2. Check if pet is already adopted (using available field as fallback)
+        # 2. Check if pet is already adopted
         if pet.get('is_adopted') or not pet.get('available', True):
             return jsonify({'error': 'This pet has already been adopted'}), 400
         
-        # 3. Prepare update data - use available field as fallback
-        update_data = {
-            'available': False,  # Always set this
-            'is_adopted': True   # Set this if column exists
-        }
+        # 3. Check if user already has a pending application for this pet
+        existing_application = supabase.table('adoption_applications').select('id').eq('user_id', current_user).eq('pet_id', pet_id).eq('status', 'pending').execute()
+        if existing_application.data:
+            return jsonify({'error': 'You already have a pending application for this pet'}), 400
         
-        # Only add these if the columns exist in your database
-        try:
-            update_data['adopted_by'] = current_user
-            update_data['adopted_at'] = datetime.now(timezone.utc).isoformat()
-        except Exception as e:
-            print(f"Note: Some adoption columns might not exist: {e}")
-        
-        # 4. Update pet as adopted
-        update_response = supabase.table('pets').update(update_data).eq('id', pet_id).execute()
-        
-        if not update_response.data:
-            return jsonify({'error': 'Failed to update pet adoption status'}), 500
-        
-        # 5. Create adoption record with form data
+        # 4. Create adoption application with form data
         adoption_data = {
             'pet_id': pet_id,
             'user_id': current_user,
-            'adopted_at': datetime.now(timezone.utc).isoformat(),
-            'status': 'completed'
+            'status': 'pending',
+            'applicant_name': data.get('applicant_name', ''),
+            'applicant_email': data.get('applicant_email', ''),
+            'applicant_phone': data.get('applicant_phone', ''),
+            'applicant_address': data.get('applicant_address', ''),
+            'living_situation': data.get('living_situation', ''),
+            'experience_with_pets': data.get('experience_with_pets', ''),
+            'reason_for_adoption': data.get('reason_for_adoption', ''),
+            'applied_at': datetime.now(timezone.utc).isoformat()
         }
         
-        # Only add form data if columns exist
-        form_fields = [
-            'applicant_name', 'applicant_email', 'applicant_phone', 'applicant_address',
-            'living_situation', 'experience_with_pets', 'reason_for_adoption'
-        ]
+        adoption_response = supabase.table('adoption_applications').insert(adoption_data).execute()
         
-        for field in form_fields:
-            if data.get(field):
-                adoption_data[field] = data[field]
-        
-        adoption_response = supabase.table('adoptions').insert(adoption_data).execute()
-        
-        print(f"✅ Adoption successful: User {current_user} adopted pet {pet_id}")
+        print(f"✅ Adoption application submitted: User {current_user} applied for pet {pet_id}")
         
         return jsonify({
-            'message': f'Congratulations! You have successfully adopted {pet["name"]}!',
-            'adoption_id': adoption_response.data[0]['id'] if adoption_response.data else None,
-            'pet': {
-                'id': pet['id'],
-                'name': pet['name'],
-                'is_adopted': True
-            }
+            'message': f'Adoption application submitted for {pet["name"]}! Your application is pending admin approval.',
+            'application_id': adoption_response.data[0]['id'] if adoption_response.data else None
         }), 200
         
     except Exception as e:
-        print(f"❌ Adoption error: {str(e)}")
-        return jsonify({'error': f'Adoption failed: {str(e)}'}), 500
+        print(f"❌ Adoption application error: {str(e)}")
+        return jsonify({'error': f'Adoption application failed: {str(e)}'}), 500
+
+
+##############################################
+# HELPER FUNCTION - CHECK ADOPTION APPLICATION STATUS
+##############################################
+def get_pet_with_application_status(pet, user_id=None):
+    """
+    Enhance pet data with application status information
+    Returns pet with has_pending_application flag
+    """
+    try:
+        # Check if pet has any pending applications
+        pending_apps = supabase.table('adoption_applications')\
+            .select('id, user_id')\
+            .eq('pet_id', pet['id'])\
+            .eq('status', 'pending')\
+            .execute()
+        
+        pet['has_pending_application'] = len(pending_apps.data) > 0
+        
+        # If user_id provided, check if THIS user has pending application
+        if user_id:
+            user_has_pending = any(app['user_id'] == str(user_id) for app in pending_apps.data)
+            pet['user_has_pending_application'] = user_has_pending
+        else:
+            pet['user_has_pending_application'] = False
+            
+        return pet
+    except Exception as e:
+        print(f"Error checking application status: {e}")
+        pet['has_pending_application'] = False
+        pet['user_has_pending_application'] = False
+        return pet
+
 
 # ADOPTION APPLICATIONS ROUTE
 # @app.route('/api/adoption-applications', methods=['POST'])
@@ -784,37 +836,45 @@ def adopt_pet(current_user, pet_id):
 #         print(f"Error creating adoption application: {str(e)}")
 #         return jsonify({'error': str(e)}), 500
 
-@app.route('/adoptions', methods=['GET'])
+@app.route('/api/user/adoptions', methods=['GET'])
 @token_required
 def get_user_adoptions(current_user):
     try:
-        # Get all adoptions for the current user with pet details
-        response = supabase.table('adoptions').select(
-            'id, status, adopted_at, pets(*)'
-        ).eq('user_id', current_user).execute()
+        # Get adoptions with pet details - FIXED: Changed from user_adoptions to adoptions table
+        response = supabase.table('adoptions').select('''
+            *,
+            pets(*, pet_images(*))
+        ''').eq('user_id', current_user).execute()
         
         adoptions = response.data
-        print(f"Found {len(adoptions)} adoptions for user {current_user}")  # Debug log
+        print(f"Found {len(adoptions)} adoptions for user {current_user}")
         
-        # Format the response to match what frontend expects
+        # Format the response
         formatted_adoptions = []
         for adoption in adoptions:
             pet = adoption.get('pets', {})
+            
+            # Format pet images
+            images = pet.get('pet_images', [])
+            if not images and pet.get('image'):
+                images = [{'image_url': pet['image'], 'image_order': 0}]
+            
+            images.sort(key=lambda x: x.get('image_order', 0))
+            
+            pet_data = {
+                **pet,
+                'images': images,
+                'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+            }
+            
+            if 'pet_images' in pet_data:
+                del pet_data['pet_images']
+            
             formatted_adoptions.append({
                 'id': adoption['id'],
-                'status': adoption.get('status', 'completed'),
-                'adopted_at': adoption['adopted_at'],
-                'pet': {
-                    'id': pet.get('id'),
-                    'name': pet.get('name'),
-                    'type': pet.get('type'),
-                    'breed': pet.get('breed'),
-                    'age': pet.get('age'),
-                    'size': pet.get('size'),
-                    'image': pet.get('image'),
-                    'personality': pet.get('personality'),
-                    'is_adopted': True
-                }
+                'adoption_date': adoption['adoption_date'],
+                'status': adoption['status'],
+                'pet': pet_data
             })
         
         return jsonify(formatted_adoptions), 200
@@ -823,41 +883,337 @@ def get_user_adoptions(current_user):
         print(f"Error in get_user_adoptions: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-
 # USER ADOPTIONS ROUTE (alternative endpoint)
-@app.route('/api/user/my-adoptions', methods=['GET'])
+##############################################
+# ADMIN — PENDING PET LISTINGS
+##############################################
+@app.route('/api/admin/pending-listings', methods=['GET'])
 @token_required
-def get_my_adoptions(current_user):
+def get_pending_listings(current_user):
     try:
-        # Get adoptions with pet details
-        response = supabase.table('adoptions').select(
-            '*, pets(*)'
-        ).eq('user_id', current_user).execute()
+        user = supabase.table('users').select('is_admin').eq('id', current_user).execute()
+        if not user.data or not user.data[0]['is_admin']:
+            return jsonify({'error': 'Admin access required'}), 403
+
+        # fetch unapproved pets
+        res = supabase.table('pets').select('*, pet_images(*), users!pets_added_by_fkey(id, full_name)').eq('approved', False).execute()
+
+        pending = []
+        for p in res.data:
+            imgs = p.get('pet_images', []) or []
+            if p.get('image') and not imgs:
+                imgs = [{'image_url': p['image'], 'image_order': 0}]
+            imgs = sorted(imgs, key=lambda x: x.get('image_order', 0))
+
+            pet_out = {
+                **p,
+                'images': imgs,
+                'main_image': p.get('main_image') or (imgs[0]['image_url'] if imgs else None)
+            }
+            if 'pet_images' in pet_out:
+                del pet_out['pet_images']
+
+            pending.append(pet_out)
+
+        return jsonify(pending), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+##############################################
+# ADMIN — APPROVE PET LISTING
+##############################################
+@app.route('/api/admin/approve-listing/<int:pet_id>', methods=['POST'])
+@token_required
+def approve_listing(current_user, pet_id):
+    try:
+        user = supabase.table('users').select('is_admin').eq('id', current_user).execute()
+        if not user.data or not user.data[0]['is_admin']:
+            return jsonify({'error': 'Admin access required'}), 403
+
+        # Ensure pet exists
+        pet = supabase.table('pets').select('*').eq('id', pet_id).execute()
+        if not pet.data:
+            return jsonify({'error': 'Pet not found'}), 404
+
+        supabase.table('pets').update({
+            'approved': True,
+            'available': True
+        }).eq('id', pet_id).execute()
+
+        return jsonify({'message': 'Pet listing approved'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+##############################################
+# ADMIN — REJECT PET LISTING
+##############################################
+@app.route('/api/admin/reject-listing/<int:pet_id>', methods=['POST'])
+@token_required
+def reject_listing(current_user, pet_id):
+    try:
+        user = supabase.table('users').select('is_admin').eq('id', current_user).execute()
+        if not user.data or not user.data[0]['is_admin']:
+            return jsonify({'error': 'Admin access required'}), 403
+
+        # Delete the pet listing entirely
+        supabase.table('pets').delete().eq('id', pet_id).execute()
+
+        return jsonify({'message': 'Pet listing rejected and deleted'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+##############################################
+# ADMIN — PENDING ADOPTION APPLICATIONS
+##############################################
+##############################################
+# ADMIN — PENDING ADOPTION APPLICATIONS
+##############################################
+##############################################
+# ADMIN — PENDING ADOPTION APPLICATIONS
+##############################################
+@app.route('/api/admin/pending-adoptions', methods=['GET'])
+@token_required
+def get_pending_adoptions(current_user):
+    try:
+        # Check if user is admin
+        user_response = supabase.table('users').select('is_admin').eq('id', current_user).execute()
         
-        adoptions = response.data
+        if not user_response.data or not user_response.data[0].get('is_admin'):
+            return jsonify({'error': 'Admin access required'}), 403
+
+        # First, get all pending applications
+        apps_response = supabase.table('adoption_applications').select('*').eq('status', 'pending').execute()
         
-        # Format response
-        formatted_adoptions = []
-        for adoption in adoptions:
-            pet = adoption.get('pets', {})
-            formatted_adoptions.append({
-                'id': adoption['id'],
-                'adoption_date': adoption['adopted_at'],
-                'status': adoption['status'],
-                'pets': {
-                    'id': pet.get('id'),
-                    'name': pet.get('name'),
-                    'type': pet.get('type'),
-                    'breed': pet.get('breed'),
-                    'age': pet.get('age'),
-                    'size': pet.get('size'),
-                    'image': pet.get('image'),
-                    'personality': pet.get('personality')
+        print(f"📊 Found {len(apps_response.data)} pending applications")
+
+        applications = []
+        
+        for app in apps_response.data:
+            print(f"🔍 Processing application {app['id']} for pet {app.get('pet_id')}")
+            
+            # Get pet details separately
+            pet_response = supabase.table('pets').select('*, pet_images(*)').eq('id', app['pet_id']).execute()
+            
+            if not pet_response.data:
+                print(f"⚠️ Pet {app['pet_id']} not found for application {app['id']}")
+                continue
+                
+            pet = pet_response.data[0]
+            
+            # Process pet images
+            images = pet.get('pet_images', []) or []
+            if pet.get('image') and not images:
+                images = [{'image_url': pet['image'], 'image_order': 0}]
+            
+            images.sort(key=lambda x: x.get('image_order', 0))
+
+            pet_data = {
+                **pet,
+                'images': images,
+                'main_image': pet.get('main_image') or (images[0]['image_url'] if images else None)
+            }
+            
+            # Remove nested pet_images to avoid duplication
+            if 'pet_images' in pet_data:
+                del pet_data['pet_images']
+
+            # Build application object
+            application_data = {
+                'id': app['id'],
+                'pet_id': app['pet_id'],
+                'user_id': app['user_id'],
+                'pets': pet_data,
+                'status': app['status'],
+                'applicant_name': app.get('applicant_name'),
+                'applicant_email': app.get('applicant_email'),
+                'applicant_phone': app.get('applicant_phone'),
+                'applicant_address': app.get('applicant_address'),
+                'living_situation': app.get('living_situation'),
+                'experience_with_pets': app.get('experience_with_pets'),
+                'reason_for_adoption': app.get('reason_for_adoption'),
+                'applied_at': app.get('applied_at')
+            }
+            
+            applications.append(application_data)
+            print(f"✅ Added application {app['id']} to list")
+
+        print(f"🎉 Final applications count: {len(applications)}")
+        return jsonify(applications), 200
+
+    except Exception as e:
+        print(f"❌ Error in get_pending_adoptions: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+##############################################
+# ADMIN — APPROVE ADOPTION (OPTION A FULL COPY)
+##############################################
+@app.route('/api/admin/approve-adoption/<uuid:application_id>', methods=['POST'])
+@token_required
+def approve_adoption(current_user, application_id):
+    try:
+        # verify admin
+        user = supabase.table('users').select('is_admin').eq('id', current_user).execute()
+        if not user.data or not user.data[0]['is_admin']:
+            return jsonify({'error': 'Admin access required'}), 403
+
+        # fetch application
+        app_res = supabase.table('adoption_applications').select('*').eq('id', str(application_id)).execute()
+        if not app_res.data:
+            return jsonify({'error': 'Application not found'}), 404
+
+        app_row = app_res.data[0]
+
+        # mark pet adopted
+        pet_update = supabase.table('pets').update({
+            'is_adopted': True,
+            'adopted_by': app_row['user_id'],
+            'adoption_date': datetime.now(timezone.utc).isoformat(),
+            'available': False
+        }).eq('id', app_row['pet_id']).execute()
+
+        # copy into adoptions table
+        supabase.table('adoptions').insert({
+            'pet_id': app_row['pet_id'],
+            'user_id': app_row['user_id'],
+            'application_id': app_row['id'],
+            'adopted_at': datetime.now(timezone.utc).isoformat(),
+            'status': 'approved',
+            'applicant_name': app_row['applicant_name'],
+            'applicant_email': app_row['applicant_email'],
+            'applicant_phone': app_row['applicant_phone'],
+            'applicant_address': app_row['applicant_address'],
+            'living_situation': app_row['living_situation'],
+            'experience_with_pets': app_row['experience_with_pets'],
+            'reason_for_adoption': app_row['reason_for_adoption'],
+            'approved_at': datetime.now(timezone.utc).isoformat(),
+            'approved_by': current_user
+        }).execute()
+
+        # mark application approved
+        supabase.table('adoption_applications').update({
+            'status': 'approved',
+            'approved_at': datetime.now(timezone.utc).isoformat(),
+            'approved_by': current_user
+        }).eq('id', str(application_id)).execute()
+
+        return jsonify({'message': 'Adoption approved'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+##############################################
+# ADMIN — REJECT ADOPTION
+##############################################
+@app.route('/api/admin/reject-adoption/<uuid:application_id>', methods=['POST'])
+@token_required
+def reject_adoption(current_user, application_id):
+    try:
+        user = supabase.table('users').select('is_admin').eq('id', current_user).execute()
+        if not user.data or not user.data[0]['is_admin']:
+            return jsonify({'error': 'Admin access required'}), 403
+
+        supabase.table('adoption_applications').update({
+            'status': 'rejected',
+            'rejected_at': datetime.now(timezone.utc).isoformat(),
+            'rejected_by': current_user
+        }).eq('id', str(application_id)).execute()
+
+        return jsonify({'message': 'Adoption rejected'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+##############################################
+# PROFILE — MY LISTINGS
+##############################################
+@app.route('/api/profile/my-listings', methods=['GET'])
+@token_required
+def my_listings(current_user):
+    try:
+        res = supabase.table('pets').select('*, pet_images(*)').eq('added_by', current_user).execute()
+
+        out = []
+        for pet in res.data:
+            imgs = pet.get('pet_images', []) or []
+            imgs = sorted(imgs, key=lambda x: x.get('image_order', 0))
+            out.append({
+                **pet,
+                'images': imgs,
+                'main_image': imgs[0]['image_url'] if imgs else None
+            })
+
+        return jsonify(out), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+##############################################
+# PROFILE — MY ADOPTION APPLICATIONS
+##############################################
+@app.route('/api/profile/my-applications', methods=['GET'])
+@token_required
+def my_applications(current_user):
+    try:
+        res = supabase.table('adoption_applications').select('*, pets(*, pet_images(*))').eq('user_id', current_user).execute()
+
+        apps = []
+        for a in res.data:
+            p = a.get('pets')
+            imgs = p.get('pet_images', []) or []
+            imgs = sorted(imgs, key=lambda x: x.get('image_order', 0))
+
+            apps.append({
+                **a,
+                'pet': {
+                    **p,
+                    'images': imgs,
+                    'main_image': imgs[0]['image_url'] if imgs else None
                 }
             })
-        
-        return jsonify(formatted_adoptions), 200
-        
+
+        return jsonify(apps), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+##############################################
+# PROFILE — MY APPROVED ADOPTIONS
+##############################################
+@app.route('/api/profile/my-adoptions', methods=['GET'])
+@token_required
+def my_adoptions(current_user):
+    try:
+        res = supabase.table('adoptions').select('*, pets(*, pet_images(*))').eq('user_id', current_user).execute()
+
+        out = []
+        for a in res.data:
+            p = a.get('pets')
+            imgs = p.get('pet_images', []) or []
+            imgs = sorted(imgs, key=lambda x: x.get('image_order', 0))
+
+            out.append({
+                **a,
+                'pet': {
+                    **p,
+                    'images': imgs,
+                    'main_image': imgs[0]['image_url'] if imgs else None
+                }
+            })
+
+        return jsonify(out), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1241,7 +1597,60 @@ def upload_image():
     except Exception as e:
         print(f"Upload error: {e}")
         return jsonify({'error': 'Failed to upload image'}), 500
+# ADMIN ROUTES - Add these before the health check route
 
+# Get pending pet listings (not approved yet)
+# Get pending pet listings
+# Get pending pet listings (only unapproved pets)
+
+
+# Add route to get user's adoption applications
+@app.route('/api/user/my-applications', methods=['GET'])
+@token_required
+def get_my_applications(current_user):
+    try:
+        response = supabase.table('adoption_applications').select('''
+            *,
+            pets(*, pet_images(*))
+        ''').eq('user_id', current_user).order('applied_at', desc=True).execute()
+        
+        return jsonify(response.data), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+# Get admin dashboard stats
+@app.route('/api/admin/stats', methods=['GET'])
+@token_required
+def get_admin_stats(current_user):
+    try:
+        # Check if user is admin
+        user_response = supabase.table('users').select('is_admin').eq('id', current_user).execute()
+        
+        if not user_response.data or not user_response.data[0].get('is_admin'):
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        # Get counts for different stats - FIXED QUERIES
+        pending_listings_response = supabase.table('pets').select('id', count='exact').eq('approved', False).execute()
+        pending_adoptions_response = supabase.table('adoption_applications').select('id', count='exact').eq('status', 'pending').execute()
+        approved_listings_response = supabase.table('pets').select('id', count='exact').eq('approved', True).eq('is_adopted', False).execute()
+        # FIXED: Changed from user_adoptions to adoptions table
+        total_adoptions_response = supabase.table('adoptions').select('id', count='exact').execute()
+        
+        stats = {
+            'pendingListings': pending_listings_response.count or 0,
+            'pendingAdoptions': pending_adoptions_response.count or 0,
+            'approvedListings': approved_listings_response.count or 0,
+            'totalAdoptions': total_adoptions_response.count or 0
+        }
+        
+        return jsonify(stats), 200
+        
+    except Exception as e:
+        print(f"Error fetching admin stats: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 # Health check
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -1665,4 +2074,70 @@ def get_user_answer_likes(current_user):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=3000)  
+    app.run(debug=True, port=3000)   
+
+# Add this route to create an admin account
+@app.route('/api/admin/create-admin', methods=['POST'])
+def create_admin_account():
+    try:
+        data = request.get_json()
+        
+        # You might want to add some security here, like a secret key
+        # to prevent anyone from creating admin accounts
+        secret_key = data.get('secret_key')
+        if secret_key != 'YOUR_ADMIN_CREATION_SECRET':  # Change this in production
+            return jsonify({'error': 'Invalid secret key'}), 403
+        
+        required_fields = ['email', 'password', 'full_name']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        email = data['email']
+        password = data['password']
+        full_name = data['full_name']
+        
+        # Check if user already exists
+        existing_user = supabase.table('users').select('id').eq('email', email).execute()
+        if existing_user.data:
+            return jsonify({'error': 'User already exists with this email'}), 400
+        
+        # Hash password
+        password_hash = generate_password_hash(password)
+        
+        # Create admin user
+        user_data = {
+            'email': email,
+            'password_hash': password_hash,
+            'full_name': full_name,
+            'is_admin': True  # This is the key field
+        }
+        
+        response = supabase.table('users').insert(user_data).execute()
+        
+        if response.data:
+            user = response.data[0]
+            # Generate JWT token
+            token = jwt.encode({
+                'user_id': user['id'],
+                'email': email,
+                'exp': datetime.now(timezone.utc) + timedelta(days=7)
+            }, app.config['SECRET_KEY'], algorithm='HS256')
+            
+            user_response = {
+                'id': user['id'],
+                'email': user['email'],
+                'full_name': user['full_name'],
+                'is_admin': user['is_admin']
+            }
+            
+            return jsonify({
+                'message': 'Admin account created successfully',
+                'user': user_response,
+                'token': token
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to create admin account'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

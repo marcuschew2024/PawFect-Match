@@ -30,6 +30,12 @@
               </router-link>
             </li>
 
+            <!-- Admin Link - Only show for admin users -->
+            <li class="nav-item" v-if="isAdmin">
+              <router-link to="/admin" class="nav-link">
+                <i class="bi bi-speedometer2 me-1"></i>Admin
+              </router-link>
+            </li>
 
             <!-- Authentication Section -->
             <li class="nav-item dropdown" v-if="!isAuthenticated">
@@ -45,6 +51,7 @@
             <li class="nav-item dropdown" v-else>
               <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                 <i class="bi bi-person-circle me-1"></i>{{ user?.full_name || 'User' }}
+                <span v-if="isAdmin" class="badge bg-warning ms-1">Admin</span>
               </a>
               <ul class="dropdown-menu">
                 <li><router-link to="/profile" class="dropdown-item">
@@ -53,6 +60,11 @@
                 <li><router-link to="/favorites" class="dropdown-item">
                     <i class="bi bi-heart me-2"></i>My Favorites
                   </router-link></li>
+                <li v-if="isAdmin">
+                  <router-link to="/admin" class="dropdown-item">
+                    <i class="bi bi-speedometer2 me-2"></i>Admin Dashboard
+                  </router-link>
+                </li>
                 <li>
                   <hr class="dropdown-divider">
                 </li>
@@ -70,7 +82,6 @@
       <router-view @auth-change="checkAuth" />
     </main>
 
-    <!-- Footer -->
     <!-- Footer -->
     <footer>
       <div class="container">
@@ -125,7 +136,8 @@ export default {
   data() {
     return {
       isAuthenticated: false,
-      user: null
+      user: null,
+      isAdmin: false
     }
   },
   mounted() {
@@ -140,28 +152,39 @@ export default {
       if (userData) {
         try {
           this.user = JSON.parse(userData);
+          this.isAdmin = this.user.is_admin === true;
         } catch (e) {
           console.error('Error parsing user data:', e);
           this.user = null;
+          this.isAdmin = false;
         }
       } else {
         this.user = null;
+        this.isAdmin = false;
       }
 
-      console.log('Auth check:', { isAuthenticated: this.isAuthenticated, user: this.user });
+      console.log('Auth check:', { 
+        isAuthenticated: this.isAuthenticated, 
+        user: this.user,
+        isAdmin: this.isAdmin 
+      });
     },
     handleLogout() {
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       this.isAuthenticated = false;
       this.user = null;
+      this.isAdmin = false;
       this.$router.push('/');
     }
   }
 }
-
 </script>
 
 <style>
-/* No inline CSS - all styles are in the external file */
+/* Add some styling for the admin badge */
+.badge.bg-warning {
+  font-size: 0.6rem;
+  padding: 0.2em 0.4em;
+}
 </style>

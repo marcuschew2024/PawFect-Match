@@ -13,12 +13,14 @@
               <p class="text-muted">{{ user.email }}</p>
             </div>
 
-            <div class="profile-stats mb-4">
-              <div class="stat-item text-center p-3">
+            <!-- Stats: Favorites + Adoptions -->
+            <div class="profile-stats mb-4 d-flex">
+              <div class="stat-item text-center p-3 flex-fill">
                 <div class="stat-number text-primary">{{ favoritePets.length }}</div>
                 <div class="stat-label">Favorites</div>
               </div>
-              <div class="stat-item text-center p-3">
+
+              <div class="stat-item text-center p-3 flex-fill">
                 <div class="stat-number text-success">{{ adoptedPets.length }}</div>
                 <div class="stat-label">Adoptions</div>
               </div>
@@ -27,17 +29,26 @@
             <nav class="profile-nav">
               <ul class="nav flex-column">
                 <li class="nav-item">
-                  <a class="nav-link" :class="{ active: activeTab === 'favorites' }" @click="activeTab = 'favorites'">
+                  <a class="nav-link" :class="{ active: activeTab === 'favorites' }" @click="goToTab('favorites')">
                     <i class="bi bi-heart me-2"></i>My Favorites
                   </a>
                 </li>
+
                 <li class="nav-item">
-                  <a class="nav-link" :class="{ active: activeTab === 'adoptions' }" @click="activeTab = 'adoptions'">
+                  <a class="nav-link" :class="{ active: activeTab === 'adoptions' }" @click="goToTab('adoptions')">
                     <i class="bi bi-house-check me-2"></i>My Adoptions
                   </a>
                 </li>
+
                 <li class="nav-item">
-                  <a class="nav-link" :class="{ active: activeTab === 'quiz' }" @click="activeTab = 'quiz'">
+                  <a class="nav-link" :class="{ active: activeTab === 'applications' }"
+                    @click="goToTab('applications')">
+                    <i class="bi bi-file-text me-2"></i>My Applications
+                  </a>
+                </li>
+
+                <li class="nav-item">
+                  <a class="nav-link" :class="{ active: activeTab === 'quiz' }" @click="goToTab('quiz')">
                     <i class="bi bi-clipboard-check me-2"></i>Lifestyle Quiz
                   </a>
                 </li>
@@ -59,10 +70,11 @@
                 </router-link>
               </div>
 
-              <div v-if="favoritesLoading" class="text-center">
+              <div v-if="favoritesLoading" class="text-center py-4">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
+                <p class="mt-2">Loading your favorites...</p>
               </div>
 
               <div v-else-if="favoritePets.length === 0" class="text-center py-5">
@@ -82,16 +94,6 @@
                         :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
                         loading="lazy">
 
-                      <!-- Compatibility Badge -->
-                      <div v-if="pet.compatibility_score" class="compatibility-badge">
-                        {{ pet.compatibility_score }}% Match
-                      </div>
-
-                      <!-- Favorite Button -->
-                      <!-- <button class="favorite-btn favorited" @click="removeFavorite(pet)">
-                        <i class="bi bi-heart-fill"></i>
-                      </button> -->
-
                       <!-- Image Source Badge -->
                       <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
                         AI Generated Image
@@ -101,6 +103,11 @@
                         Real Image
                       </div>
 
+                      <!-- Favorite Button -->
+                      <button class="favorite-btn favorited" @click="removeFavorite(pet)">
+                        <i class="bi bi-heart-fill"></i>
+                      </button>
+
                       <div v-if="!pet.imageLoaded" class="image-loading">
                         <i class="bi bi-arrow-repeat spinner"></i>
                       </div>
@@ -108,41 +115,23 @@
 
                     <div class="card-body d-flex flex-column">
                       <h5 class="card-title">{{ pet.name }}</h5>
-
-                      <!-- Compatibility Meter -->
-                      <div v-if="pet.compatibility_score" class="compatibility-meter mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                          <small class="text-muted">Compatibility</small>
-                          <small class="fw-bold text-muted">
-                            {{ pet.compatibility_score }}%
-                          </small>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                          <div class="progress-bar bg-primary" :style="{ width: pet.compatibility_score + '%' }"></div>
-                        </div>
-                      </div>
-
                       <p class="card-text mb-2 flex-grow-1">
                         <strong>Age:</strong> {{ pet.age }}<br>
                         <strong>Breed:</strong> {{ pet.breed }}<br>
                         <strong>Size:</strong> {{ pet.size }}<br>
                         <strong>Gender:</strong> {{ pet.gender }}<br>
-                        <strong>Activity:</strong>
-                        <span class="badge" :class="getActivityClass(pet.activity_level)">
-                          {{ pet.activity_level }}
-                        </span>
                       </p>
                       <p class="card-text personality">"{{ pet.personality }}"</p>
                     </div>
 
                     <div class="card-footer bg-transparent">
                       <div class="d-grid gap-2">
-                        <button class="btn view-more-btn" @click="viewPetDetails(pet)">View More</button>
-                        <button class="btn btn-outline-danger btn-sm" @click="removeFavorite(pet)">
-                          <i class="bi bi-heart-fill me-1"></i>Remove Favorite
+                        <button class="btn view-more-btn" @click="viewPetDetails(pet)">
+                          <i class="bi bi-eye me-1"></i>View More
                         </button>
                       </div>
                     </div>
+
                   </div>
                 </div>
               </div>
@@ -154,68 +143,174 @@
                 <h3>My Adoptions</h3>
               </div>
 
-              <div v-if="adoptionsLoading" class="text-center">
+              <div v-if="adoptionsLoading" class="text-center py-4">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
+                <p class="mt-2">Loading your adoptions...</p>
               </div>
 
               <div v-else-if="adoptedPets.length === 0" class="text-center py-5">
                 <i class="bi bi-house-check display-1 text-muted mb-3"></i>
                 <h4 class="text-muted">No adoptions yet</h4>
-                <p class="text-muted">Start browsing pets and submit adoption applications!</p>
+                <p class="text-muted">Your approved adoptions will appear here.</p>
                 <router-link to="/pets" class="btn btn-primary">
                   <i class="bi bi-search me-2"></i>Browse Pets
                 </router-link>
               </div>
 
               <div v-else class="row">
-                <div class="col-md-6 col-lg-4 mb-4" v-for="pet in adoptedPets" :key="pet.id">
+                <div class="col-md-6 col-lg-4 mb-4" v-for="adoption in adoptedPets" :key="adoption.id">
                   <div class="card h-100 pet-card">
                     <div class="position-relative">
-                      <img :src="pet.displayImage" :alt="pet.name" class="card-img-top"
-                        :class="{ 'image-loaded': pet.imageLoaded }" @load="onImageLoad(pet)" @error="onImageError(pet)"
-                        loading="lazy">
+                      <img :src="getPetImage(adoption)" :alt="getPetName(adoption)" class="card-img-top"
+                        :class="{ 'image-loaded': getPetImageLoaded(adoption) }" @load="onAdoptionImageLoad(adoption)"
+                        @error="onAdoptionImageError(adoption)" loading="lazy">
 
-                      <!-- Image Source Badge -->
-                      <div v-if="pet.imageSource === 'api' && pet.imageLoaded" class="api-badge">
-                        AI Generated Image
-                      </div>
-                      <div v-else-if="pet.imageSource === 'database' && pet.imageLoaded"
-                        class="api-badge database-badge">
-                        Real Image
-                      </div>
-
-                      <div v-if="!pet.imageLoaded" class="image-loading">
-                        <i class="bi bi-arrow-repeat spinner"></i>
-                      </div>
-
-                      <!-- Adopted Badge -->
                       <div class="adoption-badge">
                         <i class="bi bi-check-circle me-1"></i>Adopted
+                      </div>
+
+                      <div v-if="!getPetImageLoaded(adoption)" class="image-loading">
+                        <i class="bi bi-arrow-repeat spinner"></i>
                       </div>
                     </div>
 
                     <div class="card-body d-flex flex-column">
-                      <h5 class="card-title">{{ pet.name }}</h5>
-
+                      <h5 class="card-title">{{ getPetName(adoption) }}</h5>
                       <p class="card-text mb-2 flex-grow-1">
-                        <strong>Age:</strong> {{ pet.age }}<br>
-                        <strong>Breed:</strong> {{ pet.breed }}<br>
-                        <strong>Size:</strong> {{ pet.size }}<br>
-                        <strong>Gender:</strong> {{ pet.gender }}<br>
-                        <strong>Adopted:</strong> {{ formatDate(pet.adoption_date) }}
+                        <strong>Age:</strong> {{ getPetAge(adoption) }}<br>
+                        <strong>Breed:</strong> {{ getPetBreed(adoption) }}<br>
+                        <strong>Size:</strong> {{ getPetSize(adoption) }}<br>
+                        <strong>Adopted:</strong> {{ formatDate(adoption.adopted_at || adoption.adoption_date) }}<br>
                       </p>
-                      <p class="card-text personality">"{{ pet.personality }}"</p>
+                      <p class="card-text personality">"{{ getPetPersonality(adoption) }}"</p>
                     </div>
 
                     <div class="card-footer bg-transparent">
                       <div class="d-grid">
-                        <button class="btn view-more-btn" @click="viewPetDetails(pet)">View Details</button>
+                        <button class="btn view-more-btn" @click="viewAdoption(adoption)">
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Applications Tab -->
+            <div v-if="activeTab === 'applications'" class="tab-content">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>My Applications</h3>
+              </div>
+
+              <div v-if="applicationsLoading" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading your applications...</p>
+              </div>
+
+              <div v-else-if="allApplications.length === 0" class="text-center py-5">
+                <i class="bi bi-file-text display-1 text-muted mb-3"></i>
+                <h4 class="text-muted">No applications yet</h4>
+                <p class="text-muted">Your adoption applications will appear here.</p>
+                <router-link to="/pets" class="btn btn-primary">
+                  <i class="bi bi-search me-2"></i>Browse Pets
+                </router-link>
+              </div>
+
+              <div v-else>
+                <!-- Pending Applications Section -->
+                <div v-if="pendingApplications.length > 0" class="mb-5">
+                  <h4 class="section-header">
+                    <i class="bi bi-clock-history text-warning me-2"></i>
+                    Pending Applications ({{ pendingApplications.length }})
+                  </h4>
+                  <div class="row">
+                    <div class="col-12 mb-4" v-for="application in pendingApplications" :key="application.id">
+                      <div class="card application-card pending-application">
+                        <div class="card-body">
+                          <div class="row align-items-center">
+                            <div class="col-md-3">
+                              <div class="position-relative">
+                                <img :src="getPetImage(application)" :alt="getPetName(application)"
+                                  class="img-fluid rounded" style="height: 120px; width: 100%; object-fit: cover;"
+                                  :class="{ 'image-loaded': getPetImageLoaded(application) }"
+                                  @load="onApplicationImageLoad(application)"
+                                  @error="onApplicationImageError(application)">
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <h5>{{ getPetName(application) }}</h5>
+                              <p class="mb-1"><strong>Breed:</strong> {{ getPetBreed(application) }}</p>
+                              <p class="mb-1"><strong>Age:</strong> {{ getPetAge(application) }}</p>
+                              <p class="mb-1"><strong>Applied:</strong> {{ formatDate(application.applied_at) }}</p>
+                              <p class="mb-0"><strong>Status:</strong>
+                                <span class="badge bg-warning">Pending Review</span>
+                              </p>
+                            </div>
+                            <div class="col-md-3 text-end">
+                              <button class="btn btn-outline-primary" @click="viewApplication(application)">
+                                View Pet
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                <!-- Rejected Applications Section -->
+                <div v-if="rejectedApplications.length > 0">
+                  <h4 class="section-header">
+                    <i class="bi bi-x-circle text-danger me-2"></i>
+                    Rejected Applications ({{ rejectedApplications.length }})
+                  </h4>
+                  <div class="row">
+                    <div class="col-12 mb-4" v-for="application in rejectedApplications" :key="application.id">
+                      <div class="card application-card rejected-application">
+                        <div class="card-body">
+                          <div class="row">
+                            <div class="col-md-3">
+                              <div class="position-relative">
+                                <img :src="getPetImage(application)" :alt="getPetName(application)"
+                                  class="img-fluid rounded" style="height: 120px; width: 100%; object-fit: cover;"
+                                  :class="{ 'image-loaded': getPetImageLoaded(application) }"
+                                  @load="onApplicationImageLoad(application)"
+                                  @error="onApplicationImageError(application)">
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <h5>{{ getPetName(application) }}</h5>
+                              <p class="mb-1"><strong>Breed:</strong> {{ getPetBreed(application) }}</p>
+                              <p class="mb-1"><strong>Age:</strong> {{ getPetAge(application) }}</p>
+                              <p class="mb-1"><strong>Applied:</strong> {{ formatDate(application.applied_at) }}</p>
+                              <p class="mb-1"><strong>Rejected:</strong> {{ formatDate(application.rejected_at) }}</p>
+                              <p class="mb-2"><strong>Status:</strong>
+                                <span class="badge bg-danger">Rejected</span>
+                              </p>
+
+                              <div v-if="application.rejection_reason" class="alert alert-danger mb-0">
+                                <strong><i class="bi bi-exclamation-triangle me-2"></i>Rejection Reason:</strong>
+                                <p class="mb-0 mt-2">{{ application.rejection_reason }}</p>
+                              </div>
+                            </div>
+                            <div class="col-md-3 text-end">
+                              <button class="btn btn-outline-primary mb-2" @click="viewApplication(application)">
+                                View Pet
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -229,64 +324,70 @@
                 </button>
               </div>
 
-              <div v-if="quizLoading" class="text-center">
+              <div v-if="quizLoading" class="text-center py-4">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
+                <p class="mt-2">Loading quiz results...</p>
               </div>
 
               <div v-else class="quiz-section">
-                <div v-if="userQuiz" class="current-quiz-results mb-4">
-                  <div class="alert alert-success">
-                    <h5><i class="bi bi-check-circle me-2"></i>Quiz Completed</h5>
-                    <p class="mb-0">Your current preferences are saved. You can update them anytime.</p>
+                <div v-if="userQuiz" class="quiz-results">
+                  <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    You've completed the lifestyle quiz! Your preferences are being used to find compatible pets.
                   </div>
 
-                  <div class="quiz-summary p-4 bg-light rounded">
-                    <h6 class="mb-3">Current Preferences</h6>
-                    <div class="row">
-                      <div class="col-md-6">
-                        <p><strong>Home Type:</strong> {{ formatQuizValue(userQuiz.living_space) }}</p>
-                        <p><strong>Activity Level:</strong> {{ formatQuizValue(userQuiz.activity_level) }}</p>
-                        <p><strong>Pet Type:</strong> {{ formatQuizValue(userQuiz.preferred_pet_type) }}</p>
-                        <p><strong>Experience:</strong> {{ formatQuizValue(userQuiz.experience_level) }}</p>
-                      </div>
-                      <div class="col-md-6">
-                        <p><strong>Home Environment:</strong> {{ formatQuizValue(userQuiz.home_environment) }}</p>
-                        <p><strong>Time Commitment:</strong> {{ formatQuizValue(userQuiz.time_commitment) }}</p>
-                        <p><strong>Allergies:</strong> {{ userQuiz.has_allergies ? 'Yes' : 'No' }}</p>
-                        <p><strong>Children:</strong> {{ userQuiz.has_children ? 'Yes' : 'No' }}</p>
-                        <p><strong>Other Pets:</strong> {{ userQuiz.has_other_pets ? 'Yes' : 'No' }}</p>
-                      </div>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <h5>Your Preferences</h5>
+                      <ul class="list-group">
+                        <li class="list-group-item">
+                          <strong>Living Space:</strong> {{ formatQuizValue(userQuiz.living_space) }}
+                        </li>
+                        <li class="list-group-item">
+                          <strong>Activity Level:</strong> {{ formatQuizValue(userQuiz.activity_level) }}
+                        </li>
+                        <li class="list-group-item">
+                          <strong>Preferred Pet:</strong> {{ formatQuizValue(userQuiz.preferred_pet_type) }}
+                        </li>
+                        <li class="list-group-item">
+                          <strong>Experience:</strong> {{ formatQuizValue(userQuiz.experience_level) }}
+                        </li>
+                      </ul>
                     </div>
-                    <div v-if="userQuiz.allergies" class="row mt-2">
-                      <div class="col-12">
-                        <p><strong>Allergy Details:</strong> {{ userQuiz.allergies }}</p>
-                      </div>
-                    </div>
-                    <div v-if="userQuiz.children_ages" class="row mt-2">
-                      <div class="col-12">
-                        <p><strong>Children Ages:</strong> {{ userQuiz.children_ages }}</p>
-                      </div>
-                    </div>
-                    <div v-if="userQuiz.other_pets_details" class="row mt-2">
-                      <div class="col-12">
-                        <p><strong>Other Pets:</strong> {{ userQuiz.other_pets_details }}</p>
-                      </div>
+                    <div class="col-md-6">
+                      <h5>Additional Details</h5>
+                      <ul class="list-group">
+                        <li class="list-group-item">
+                          <strong>Home Environment:</strong> {{ formatQuizValue(userQuiz.home_environment) }}
+                        </li>
+                        <li class="list-group-item">
+                          <strong>Time Commitment:</strong> {{ formatQuizValue(userQuiz.time_commitment) }}
+                        </li>
+                        <li class="list-group-item" v-if="userQuiz.has_children">
+                          <strong>Children:</strong> {{ userQuiz.children_ages || 'Yes' }}
+                        </li>
+                        <li class="list-group-item" v-if="userQuiz.has_other_pets">
+                          <strong>Other Pets:</strong> {{ userQuiz.other_pets_details || 'Yes' }}
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </div>
 
                 <div v-else class="text-center py-5">
                   <i class="bi bi-clipboard-check display-1 text-muted mb-3"></i>
-                  <h4 class="text-muted">No Quiz Completed</h4>
-                  <p class="text-muted">Complete the lifestyle quiz to get better pet recommendations!</p>
+                  <h4 class="text-muted">No Quiz Results</h4>
+                  <p class="text-muted">Complete the lifestyle quiz to get personalized pet recommendations.</p>
                   <button class="btn btn-primary" @click="updateQuiz">
                     <i class="bi bi-clipboard-check me-2"></i>Take Lifestyle Quiz
                   </button>
                 </div>
               </div>
             </div>
+            <!-- /Quiz Tab -->
+
           </div>
         </div>
       </div>
@@ -307,6 +408,8 @@ export default {
       favoritesLoading: false,
       adoptedPets: [],
       adoptionsLoading: false,
+      allApplications: [],
+      applicationsLoading: false,
       userQuiz: null,
       quizLoading: false,
       imageCache: new Map(),
@@ -314,59 +417,68 @@ export default {
       allCatBreeds: []
     }
   },
+  computed: {
+    pendingApplications() {
+      return this.allApplications.filter(app => app.status === 'pending');
+    },
+    rejectedApplications() {
+      return this.allApplications.filter(app => app.status === 'rejected');
+    }
+  },
   async mounted() {
     await this.loadUserProfile();
     await this.loadAllBreeds();
 
-    // Load both favorites and adoptions immediately
-    await Promise.all([
-      this.loadFavorites(),
-      this.loadAdoptions()
-    ]);
+    // Set active tab from URL or default to 'favorites'
+    const tabFromUrl = this.$route.query.tab;
+    this.activeTab = tabFromUrl || 'favorites';
 
-    this.activeTab = this.$route.query.tab || 'favorites';
-
-    // Only load quiz results if the active tab is quiz
-    if (this.activeTab === 'quiz') {
-      await this.loadQuizResults();
+    // If no tab in URL, set it to favorites and update URL
+    if (!tabFromUrl) {
+      this.$router.replace({ query: { ...this.$route.query, tab: 'favorites' } });
     }
 
-    // Store reference for external access
-    window.profilePage = this;
+    await this.loadInitialData();
   },
   watch: {
     activeTab(newTab) {
+      // Keep URL in sync with active tab
+      this.$router.replace({ query: { ...this.$route.query, tab: newTab } });
+
+      // Load tab-specific data when switching tabs
       if (newTab === 'quiz') {
         this.loadQuizResults();
+      } else if (newTab === 'applications') {
+        this.loadAllApplications();
       }
     }
   },
   methods: {
-    showToast(message, type = "info") {
-      const toast = document.createElement("div");
-      toast.className = `alert alert-${type === "error" ? "danger" : "success"} alert-dismissible fade show position-fixed`;
-      toast.style.cssText = "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
-      toast.innerHTML = `
-    ${message}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  `;
-      document.body.appendChild(toast);
-
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
-      }, 5000);
+    goToTab(tab) {
+      this.activeTab = tab;
     },
+
+    async loadInitialData() {
+      // Always load favorites and adoptions
+      await Promise.all([
+        this.loadFavorites(),
+        this.loadAdoptions()
+      ]);
+
+      // Load additional data based on active tab
+      if (this.activeTab === 'quiz') {
+        await this.loadQuizResults();
+      } else if (this.activeTab === 'applications') {
+        await this.loadAllApplications();
+      }
+    },
+
     async loadUserProfile() {
       try {
         const token = localStorage.getItem('authToken');
         const response = await fetch(`${API_BASE_URL}/user/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-
         if (response.ok) {
           const profileData = await response.json();
           this.user = profileData.user || {};
@@ -383,42 +495,31 @@ export default {
 
         // Get favorite IDs
         const favoritesResponse = await fetch(`${API_BASE_URL}/user/favorites`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (favoritesResponse.ok) {
           const favoriteIds = await favoritesResponse.json();
-          console.log('Favorite IDs:', favoriteIds);
 
-          if (favoriteIds.length === 0) {
+          if (!favoriteIds || favoriteIds.length === 0) {
             this.favoritePets = [];
             return;
           }
 
-          // Get ALL pets first (including adopted ones) to ensure we get all favorites
+          // Get pets data for favorite IDs
           const petsResponse = await fetch(`${API_BASE_URL}/pets`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
           });
 
           if (petsResponse.ok) {
             let allPets = await petsResponse.json();
-            console.log('All pets from API:', allPets);
-
-            // Filter to only favorited pets
             let favoritedPets = allPets.filter(pet => favoriteIds.includes(pet.id));
-            console.log('Raw favorited pets:', favoritedPets);
-
-            // Process images using the same method as PetListingPage
             this.favoritePets = await this.processPetsWithImages(favoritedPets);
-            console.log('Processed favorited pets with images:', this.favoritePets);
           }
         }
       } catch (error) {
         console.error('Error loading favorites:', error);
+        this.showToast("Error loading favorites", "error");
       } finally {
         this.favoritesLoading = false;
       }
@@ -428,78 +529,209 @@ export default {
       this.adoptionsLoading = true;
       try {
         const token = localStorage.getItem('authToken');
-        console.log('Loading adoptions...');
 
-        // Try both endpoints
         const endpoints = [
+          `${API_BASE_URL}/profile/my-adoptions`,
           `${API_BASE_URL}/user/adoptions`,
-          `${API_BASE_URL}/user/my-adoptions`
+          `${API_BASE_URL}/user/my-applications`
         ];
 
         let adoptionsData = [];
 
         for (const endpoint of endpoints) {
           try {
-            console.log(`Trying endpoint: ${endpoint}`);
             const response = await fetch(endpoint, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
+              headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (response.ok) {
-              adoptionsData = await response.json();
-              console.log(`✅ Success from ${endpoint}:`, adoptionsData);
-              break; // Use the first successful endpoint
-            } else {
-              console.log(`❌ ${endpoint} failed:`, response.status);
+              const data = await response.json();
+              if (data && data.length > 0) {
+                adoptionsData = data.filter(item =>
+                  item.status === 'approved' || (item.pet && item.pet.is_adopted)
+                );
+                if (adoptionsData.length > 0) break;
+              }
             }
-          } catch (error) {
-            console.log(`❌ ${endpoint} error:`, error);
+          } catch (err) {
+            console.log(`Error from ${endpoint}:`, err);
           }
         }
 
-        if (adoptionsData && adoptionsData.length > 0) {
-          console.log('Processing adoptions data:', adoptionsData);
+        if (adoptionsData.length > 0) {
+          const processedAdoptions = await Promise.all(
+            adoptionsData.map(async (adoption) => {
+              const petData = adoption.pet || adoption;
+              if (!petData || !petData.id) return null;
 
-          // Extract pets from adoption records - handle different formats
-          const processedAdoptions = await Promise.all(adoptionsData.map(async (adoption) => {
-            // Handle different response formats
-            const petData = adoption.pet || adoption.pets || adoption;
-            const adoptionDate = adoption.adopted_at || adoption.adoption_date;
-
-            console.log('Processing adoption:', adoption, 'Pet data:', petData);
-
-            // Process the pet image using the same method as PetListingPage
-            const processedPet = await this.processSinglePetWithImages(petData);
-
-            return {
-              ...processedPet,
-              adoption_date: adoptionDate
-            };
-          }));
-
-          this.adoptedPets = processedAdoptions;
-          console.log('Final adopted pets:', this.adoptedPets);
+              const processedPet = await this.processSinglePetWithImages(petData);
+              return {
+                ...adoption,
+                pet: processedPet,
+                id: adoption.id || adoption.pet_id,
+                name: processedPet.name,
+                breed: processedPet.breed,
+                age: processedPet.age,
+                size: processedPet.size,
+                personality: processedPet.personality,
+                displayImage: processedPet.displayImage,
+                imageLoaded: processedPet.imageLoaded,
+                pet_id: processedPet.id
+              };
+            })
+          );
+          this.adoptedPets = processedAdoptions.filter(a => a !== null);
         } else {
           this.adoptedPets = [];
-          console.log('No adoptions data received');
         }
       } catch (error) {
         console.error('Error loading adoptions:', error);
-        this.adoptedPets = [];
+        this.showToast("Error loading adoptions", "error");
       } finally {
         this.adoptionsLoading = false;
       }
     },
 
-    // Image processing methods - EXACTLY like PetListingPage
+    async loadAllApplications() {
+      this.applicationsLoading = true;
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/profile/my-applications`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const applications = await response.json();
+
+          if (applications && applications.length > 0) {
+            const applicationsWithPetData = await Promise.all(
+              applications.map(async (app) => {
+                try {
+                  const petData = app.pet || app.pets;
+                  if (!petData || !petData.id) return null;
+
+                  const processedPet = await this.processSinglePetWithImages(petData);
+
+                  return {
+                    ...app,
+                    pet: processedPet,
+                    name: processedPet.name,
+                    breed: processedPet.breed,
+                    age: processedPet.age,
+                    size: processedPet.size,
+                    type: processedPet.type,
+                    displayImage: processedPet.displayImage,
+                    imageLoaded: processedPet.imageLoaded,
+                    pet_id: processedPet.id,
+                    status: app.status || 'pending',
+                    applied_at: app.applied_at || app.created_at || new Date().toISOString(),
+                    rejected_at: app.rejected_at,
+                    rejection_reason: app.rejection_reason || null
+                  };
+                } catch (error) {
+                  console.error('Error processing application:', error);
+                  return null;
+                }
+              })
+            );
+
+            this.allApplications = applicationsWithPetData.filter(app => app !== null);
+          } else {
+            this.allApplications = [];
+          }
+        } else {
+          console.error('Failed to load applications');
+          this.allApplications = [];
+        }
+      } catch (error) {
+        console.error('Error loading applications:', error);
+        this.showToast("Error loading applications", "error");
+        this.allApplications = [];
+      } finally {
+        this.applicationsLoading = false;
+      }
+    },
+
+
+
+    async loadQuizResults() {
+      this.quizLoading = true;
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/user/quiz`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const quizData = await response.json();
+          // FIX: The quiz data is in 'profile', not 'quiz'
+          if (quizData.has_completed_quiz && quizData.profile) {
+            this.userQuiz = quizData.profile;
+            console.log('Quiz data loaded:', this.userQuiz);
+          } else {
+            this.userQuiz = null;
+          }
+        } else if (response.status === 404) {
+          this.userQuiz = null;
+        }
+      } catch (error) {
+        console.error('Error loading quiz results:', error);
+        this.userQuiz = null;
+      } finally {
+        this.quizLoading = false;
+      }
+    },
+
+    async loadAllBreeds() {
+      try {
+        const [dogResponse, catResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/external/dog-breeds`),
+          fetch(`${API_BASE_URL}/external/cat-breeds`)
+        ]);
+
+        if (dogResponse.ok) {
+          this.allDogBreeds = await dogResponse.json();
+        }
+        if (catResponse.ok) {
+          this.allCatBreeds = await catResponse.json();
+        }
+      } catch (error) {
+        console.error('Error loading breeds:', error);
+      }
+    },
+
+    // -------- Helpers for nested pet data --------
+    getPetImage(item) {
+      return item.pet?.displayImage || item.displayImage || this.getColoredPlaceholder(item.pet || item);
+    },
+    getPetName(item) {
+      return item.pet?.name || item.name || 'Unknown';
+    },
+    getPetAge(item) {
+      return item.pet?.age || item.age || 'Unknown';
+    },
+    getPetBreed(item) {
+      return item.pet?.breed || item.breed || 'Unknown';
+    },
+    getPetSize(item) {
+      return item.pet?.size || item.size || 'Unknown';
+    },
+    getPetPersonality(item) {
+      return item.pet?.personality || item.personality || 'No description available';
+    },
+    getPetImageLoaded(item) {
+      return item.pet?.imageLoaded || item.imageLoaded || false;
+    },
+    getPetId(item) {
+      return item.pet?.id || item.pet_id || item.id;
+    },
+
+    // -------- Image processing --------
     async processPetsWithImages(pets) {
       const processedPets = pets.map(pet => {
         let displayImage = null;
         let imageSource = 'placeholder';
 
-        // Use the exact same logic as PetListingPage
         if (pet.main_image && pet.main_image.trim() !== '') {
           displayImage = pet.main_image;
           imageSource = 'database';
@@ -513,23 +745,30 @@ export default {
 
         return {
           ...pet,
-          displayImage: displayImage,
+          displayImage,
           imageLoaded: false,
           placeholderImage: imageSource === 'placeholder',
-          imageSource: imageSource
+          imageSource
         };
       });
 
-      // Fetch API images for pets that need them (same as PetListingPage)
       this.fetchApiImagesForPets(processedPets);
       return processedPets;
     },
 
     async processSinglePetWithImages(pet) {
+      if (!pet) {
+        return {
+          displayImage: this.getColoredPlaceholder({ type: 'dog', name: 'Unknown', id: 0 }),
+          imageLoaded: true,
+          placeholderImage: true,
+          imageSource: 'placeholder'
+        };
+      }
+
       let displayImage = null;
       let imageSource = 'placeholder';
 
-      // Use the exact same logic as PetListingPage
       if (pet.main_image && pet.main_image.trim() !== '') {
         displayImage = pet.main_image;
         imageSource = 'database';
@@ -543,23 +782,21 @@ export default {
 
       const processedPet = {
         ...pet,
-        displayImage: displayImage,
+        displayImage,
         imageLoaded: false,
         placeholderImage: imageSource === 'placeholder',
-        imageSource: imageSource
+        imageSource
       };
 
-      // Fetch API image if needed
-      if (processedPet.placeholderImage && processedPet.imageSource === 'placeholder') {
-        await this.fetchApiImageForSinglePet(processedPet);
+      if (imageSource === 'placeholder') {
+        this.fetchApiImageForSinglePet(processedPet);
       }
 
       return processedPet;
     },
 
     async fetchApiImagesForPets(pets) {
-      const petsNeedingImages = pets.filter(pet => pet.placeholderImage && pet.imageSource === 'placeholder');
-
+      const petsNeedingImages = pets.filter(p => p.placeholderImage && p.imageSource === 'placeholder');
       const batchSize = 3;
 
       for (let i = 0; i < petsNeedingImages.length; i += batchSize) {
@@ -572,10 +809,7 @@ export default {
               pet.image = apiImage;
               pet.placeholderImage = false;
               pet.imageSource = 'api';
-
-              // Update the arrays to trigger reactivity
-              this.favoritePets = [...this.favoritePets];
-              this.adoptedPets = [...this.adoptedPets];
+              this.$forceUpdate();
             }
           } catch (error) {
             console.error(`Failed to fetch API image for ${pet.name}:`, error);
@@ -590,30 +824,12 @@ export default {
       }
     },
 
-    async fetchApiImageForSinglePet(pet) {
-      try {
-        const apiImage = await this.fetchPetImage(pet);
-        if (apiImage) {
-          pet.displayImage = apiImage;
-          pet.image = apiImage;
-          pet.placeholderImage = false;
-          pet.imageSource = 'api';
-
-          // Update the arrays to trigger reactivity
-          this.favoritePets = [...this.favoritePets];
-          this.adoptedPets = [...this.adoptedPets];
-        } else {
-          pet.displayImage = this.getColoredPlaceholder(pet);
-          pet.placeholderImage = false;
-        }
-      } catch (error) {
-        console.error(`Error fetching API image for ${pet.name}:`, error);
-        pet.displayImage = this.getColoredPlaceholder(pet);
-        pet.placeholderImage = false;
-      }
-    },
-
     async fetchPetImage(pet) {
+      if (!pet || !pet.type || !pet.breed) {
+        console.warn('Invalid pet object for image fetch:', pet);
+        return "";
+      }
+
       const cacheKey = `${pet.type}-${pet.breed}`;
       if (this.imageCache.has(cacheKey)) {
         return this.imageCache.get(cacheKey);
@@ -634,7 +850,10 @@ export default {
 
         const response = await fetch(`${apiUrl}?${params}`, { headers });
 
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        if (!response.ok) {
+          console.warn(`API error for ${pet.name}: ${response.status}`);
+          return "";
+        }
 
         const data = await response.json();
         if (data && data.length > 0 && data[0].url) {
@@ -642,6 +861,7 @@ export default {
           this.imageCache.set(cacheKey, imageUrl);
           return imageUrl;
         }
+
         return "";
       } catch (error) {
         console.error(`Error fetching image for ${pet.name}:`, error);
@@ -649,84 +869,76 @@ export default {
       }
     },
 
-    findBreedId(breedName, type) {
-      const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
+    async fetchApiImageForSinglePet(pet) {
+      try {
+        const apiImage = await this.fetchPetImage(pet);
+        if (apiImage) {
+          pet.displayImage = apiImage;
+          pet.image = apiImage;
+          pet.placeholderImage = false;
+          pet.imageSource = 'api';
+          this.$forceUpdate();
+        } else {
+          pet.displayImage = this.getColoredPlaceholder(pet);
+          pet.placeholderImage = false;
+        }
+      } catch (error) {
+        console.error(`Error fetching API image for ${pet.name}:`, error);
+        pet.displayImage = this.getColoredPlaceholder(pet);
+        pet.placeholderImage = false;
+      }
+    },
 
-      if (!breeds.length) {
+    findBreedId(breedName, type) {
+      if (!breedName || !type) return null;
+      const breeds = type === "dog" ? this.allDogBreeds : this.allCatBreeds;
+      if (!breeds || !breeds.length) return null;
+
+      try {
+        const normalizedBreedName = breedName.toString().toLowerCase().trim();
+        if (!normalizedBreedName) return null;
+
+        let breed = breeds.find(b =>
+          b.name && b.name.toString().toLowerCase().trim() === normalizedBreedName
+        );
+        if (breed) return breed.id;
+
+        breed = breeds.find(b => {
+          if (!b.name) return false;
+          const apiName = b.name.toString().toLowerCase().trim();
+          return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 3;
+        });
+        if (breed) return breed.id;
+
+        breed = breeds.find(b => {
+          if (!b.name) return false;
+          const apiName = b.name.toString().toLowerCase().trim();
+          return normalizedBreedName.includes(apiName) && apiName.length >= 3;
+        });
+        if (breed) return breed.id;
+
+        const breedWords = normalizedBreedName.split(/\s+/).filter(word => word.length >= 3);
+        if (breedWords.length > 0) {
+          breed = breeds.find(b => {
+            if (!b.name) return false;
+            const apiWords = b.name.toString().toLowerCase().trim().split(/\s+/);
+            return breedWords.some(word => apiWords.includes(word));
+          });
+          if (breed) return breed.id;
+        }
+
+        return null;
+      } catch (error) {
+        console.error('Error in findBreedId:', error, { breedName, type });
         return null;
       }
-
-      const normalizedBreedName = breedName.toLowerCase().trim();
-
-      let breed = breeds.find(b =>
-        b.name.toLowerCase().trim() === normalizedBreedName
-      );
-
-      if (breed) {
-        return breed.id;
-      }
-
-      breed = breeds.find(b => {
-        const apiName = b.name.toLowerCase().trim();
-        return apiName.includes(normalizedBreedName) && normalizedBreedName.length >= 4;
-      });
-
-      if (breed) {
-        return breed.id;
-      }
-
-      breed = breeds.find(b => {
-        const apiName = b.name.toLowerCase().trim();
-        return normalizedBreedName.includes(apiName) && apiName.length >= 4;
-      });
-
-      if (breed) {
-        return breed.id;
-      }
-
-      const breedWords = normalizedBreedName.split(/\s+/);
-      breed = breeds.find(b => {
-        const apiWords = b.name.toLowerCase().trim().split(/\s+/);
-        return breedWords.some(word =>
-          word.length >= 4 && apiWords.includes(word)
-        );
-      });
-
-      if (breed) {
-        return breed.id;
-      }
-
-      return null;
     },
 
-    async loadAllBreeds() {
-      try {
-        const token = localStorage.getItem('authToken');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const [dogResponse, catResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/external/dog-breeds`, { headers }),
-          fetch(`${API_BASE_URL}/external/cat-breeds`, { headers })
-        ]);
-
-        if (dogResponse.ok) {
-          this.allDogBreeds = await dogResponse.json();
-        }
-
-        if (catResponse.ok) {
-          this.allCatBreeds = await catResponse.json();
-        }
-
-      } catch (error) {
-        console.error("Error fetching breed lists:", error);
-      }
-    },
-
+    // -------- Image load handlers --------
     onImageLoad(pet) {
       pet.imageLoaded = true;
+      this.$forceUpdate();
     },
-
     onImageError(pet) {
       if (pet.imageSource === 'database') {
         pet.placeholderImage = true;
@@ -739,182 +951,155 @@ export default {
         pet.displayImage = this.getColoredPlaceholder(pet);
         pet.placeholderImage = false;
       }
-
       pet.imageLoaded = true;
+      this.$forceUpdate();
     },
 
-    getActivityClass(activity) {
-      switch (activity) {
-        case 'low': return 'bg-secondary';
-        case 'medium': return 'bg-warning';
-        case 'high': return 'bg-success';
-        default: return 'bg-info';
-      }
+    onAdoptionImageLoad(adoption) {
+      if (adoption.pet) adoption.pet.imageLoaded = true;
+      else adoption.imageLoaded = true;
+      this.$forceUpdate();
+    },
+    onAdoptionImageError(adoption) {
+      if (adoption.pet) this.onImageError(adoption.pet);
+      else this.onImageError(adoption);
     },
 
-    // Method to refresh all data
-    async refreshProfileData() {
-      await this.loadFavorites();
-      await this.loadAdoptions();
+    onApplicationImageLoad(application) {
+      if (application.pet) application.pet.imageLoaded = true;
+      else application.imageLoaded = true;
+      this.$forceUpdate();
+    },
+    onApplicationImageError(application) {
+      if (application.pet) this.onImageError(application.pet);
+      else this.onImageError(application);
     },
 
-    async debugAdoptions() {
-      console.log('=== DEBUG ADOPTIONS ===');
-      console.log('Current adoptedPets:', this.adoptedPets);
-      console.log('Adopted pets length:', this.adoptedPets.length);
-
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.log('No auth token found');
-        return;
-      }
-
-      // Test all endpoints
-      const endpoints = [
-        `${API_BASE_URL}/user/adoptions`,
-        `${API_BASE_URL}/user/my-adoptions`,
-        `${API_BASE_URL}/user/profile`
-      ];
-
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          const data = await response.json();
-          console.log(`${endpoint}:`, response.status, data);
-        } catch (error) {
-          console.log(`${endpoint} error:`, error);
-        }
-      }
-    },
-
-    async loadQuizResults() {
-      this.quizLoading = true;
-      try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_BASE_URL}/user/quiz`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          const quizData = await response.json();
-          console.log('Quiz API response:', quizData); // Debug log
-
-          if (quizData.has_completed_quiz && quizData.profile) {
-            this.userQuiz = quizData.profile;
-          } else {
-            this.userQuiz = null;
-          }
-        } else {
-          this.userQuiz = null;
-        }
-      } catch (error) {
-        console.error('Error loading quiz results:', error);
-        this.userQuiz = null;
-      } finally {
-        this.quizLoading = false;
-      }
-    },
-
+    // -------- Actions --------
     async removeFavorite(pet) {
       try {
         const token = localStorage.getItem('authToken');
-
-        // Remove from favorites
-        await fetch(`${API_BASE_URL}/user/favorites/${pet.id}`, {
+        const response = await fetch(`${API_BASE_URL}/user/favorites/${pet.id}`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        // Remove from local array - this automatically updates the count
-        this.favoritePets = this.favoritePets.filter(p => p.id !== pet.id);
-        this.showToast("Removed from favorites", "success"); // Add this line
-
+        if (response.ok) {
+          this.favoritePets = this.favoritePets.filter(p => p.id !== pet.id);
+          this.showToast("Removed from favorites", "success");
+        } else {
+          throw new Error('Failed to remove favorite');
+        }
       } catch (error) {
         console.error('Error removing favorite:', error);
-        this.showToast("Failed to remove favorite. Please try again.", "error"); // Add this line
+        this.showToast("Failed to remove favorite. Please try again.", "error");
       }
     },
 
+    viewAdoption(adoption) {
+      const petId = this.getPetId(adoption);
+      if (petId) this.$router.push(`/pet/${petId}`);
+      else {
+        console.error('No pet ID found for adoption:', adoption);
+        this.showToast("Could not view pet details", "error");
+      }
+    },
+    viewApplication(application) {
+      const petId = this.getPetId(application);
+      if (petId) this.$router.push(`/pet/${petId}`);
+      else {
+        console.error('No pet ID found for application:', application);
+        this.showToast("Could not view pet details", "error");
+      }
+    },
     viewPetDetails(pet) {
       this.$router.push(`/pet/${pet.id}`);
     },
-
     updateQuiz() {
       this.$router.push('/quiz');
+    },
+
+    // -------- Utils --------
+    getColoredPlaceholder(pet) {
+      if (!pet) pet = { type: 'dog', name: 'Unknown', id: 0 };
+
+      const colors = {
+        dog: ['#ffb6c1', '#ffd1dc', '#ffecb3', '#c8e6c9'],
+        cat: ['#bbdefb', '#c5cae9', '#e1bee7', '#f8bbd0']
+      };
+
+      const typeColors = colors[pet.type] || colors.dog;
+      const colorIndex = pet.id ? (typeof pet.id === 'number'
+        ? pet.id
+        : pet.id.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) : 0;
+      const color = typeColors[colorIndex % typeColors.length];
+      const emoji = pet.type === 'dog' ? '🐕' : '🐱';
+
+      return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='250' viewBox='0 0 300 250'%3E%3Crect fill='${color}' width='300' height='250'/%3E%3Ctext fill='%23666' font-size='24' font-family='system-ui' x='150' y='125' text-anchor='middle' dominant-baseline='middle'%3E${emoji}%3C/text%3E%3Ctext fill='%23333' font-size='16' font-family='system-ui' x='150' y='160' text-anchor='middle'%3E${pet.name || 'Unknown'}%3C/text%3E%3C/svg%3E`;
     },
 
     formatDate(dateString) {
       if (!dateString) return 'Unknown date';
       const date = new Date(dateString);
       return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
       });
     },
 
     formatQuizValue(value) {
       if (!value) return 'Not specified';
-
       const formatMap = {
-        // Living Space
         'apartment': 'Apartment/Condo',
         'house': 'House with Yard',
         'farm': 'Farm/Rural Area',
-
-        // Activity Level
-        'low': 'Low Activity',
-        'medium': 'Moderate Activity',
-        'high': 'High Activity',
-
-        // Pet Type
-        'dog': 'Dogs Only',
-        'cat': 'Cats Only',
-        'both': 'Open to Both',
-
-        // Experience Level
-        'first_time': 'First-time Owner',
+        'low': 'Low',
+        'medium': 'Medium',
+        'high': 'High',
+        'dog': 'Dogs',
+        'cat': 'Cats',
+        'both': 'Dogs & Cats',
+        'first_time': 'First Time Owner',
         'some_experience': 'Some Experience',
         'experienced': 'Experienced Owner',
-
-        // Home Environment
         'quiet': 'Quiet & Calm',
         'active': 'Moderately Active',
-        'very_active': 'Very Active',
-
-        // Time Commitment
-        'low': '0-4 Hours Alone',
-        'medium': '4-8 Hours Alone',
-        'high': '8+ Hours Alone'
+        'very_active': 'Very Active'
       };
-
-      return formatMap[value] || value.toString().charAt(0).toUpperCase() + value.slice(1);
+      return formatMap[value] || value.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     },
 
-    getColoredPlaceholder(pet) {
-      const colors = {
-        dog: ['#ffb6c1', '#ffd1dc', '#ffecb3', '#c8e6c9'],
-        cat: ['#bbdefb', '#c5cae9', '#e1bee7', '#f8bbd0']
-      };
-      const typeColors = colors[pet.type] || colors.dog;
-      const color = typeColors[pet.id % typeColors.length];
-      const emoji = pet.type === 'dog' ? '🐕' : '🐱';
+    showToast(message, type = 'info') {
+      const toast = document.createElement("div");
+      toast.className = `alert alert-${type === "error" ? "danger" : "success"} alert-dismissible fade show position-fixed`;
+      toast.style.cssText = "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+      toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      document.body.appendChild(toast);
 
-      return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='250' viewBox='0 0 300 250'%3E%3Crect fill='${color}' width='300' height='250'/%3E%3Ctext fill='%23666' font-size='24' font-family='system-ui' x='150' y='125' text-anchor='middle' dominant-baseline='middle'%3E${emoji}%3C/text%3E%3Ctext fill='%23333' font-size='16' font-family='system-ui' x='150' y='160' text-anchor='middle'%3E${pet.name}%3C/text%3E%3C/svg%3E`;
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 5000);
     }
   }
 }
 </script>
 
 <style scoped>
+:root {
+  --primary-pink: #ffb6c1;
+  --primary-pink-dark: #ff91a4;
+  --text-dark: #2c3e50;
+  --text-light: #6c757d;
+  --border-light: #e9ecef;
+  --background-light: #f8f9fa;
+  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-heavy: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
 .profile-sidebar {
   background: white;
   padding: 2rem;
@@ -930,10 +1115,10 @@ export default {
   border-bottom: 1px solid var(--border-light);
 }
 
+/* Make stats flex-based for 2 equal items */
 .profile-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  display: flex;
+  gap: 0.75rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border-light);
 }
@@ -942,23 +1127,30 @@ export default {
   background: var(--background-light);
   border-radius: 8px;
   transition: all 0.3s ease;
+  min-width: 0;
+  overflow: hidden;
+  flex: 1;
+  /* equal widths */
 }
 
 .stat-item:hover {
-  background: var(--primary-pink-light);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
 }
 
 .stat-number {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  margin-bottom: 0.25rem;
+  line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: var(--text-light);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .profile-nav .nav-link {
@@ -972,6 +1164,9 @@ export default {
   background: none;
   text-align: left;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .profile-nav .nav-link:hover,
@@ -990,6 +1185,13 @@ export default {
   min-height: 500px;
 }
 
+.section-header {
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-light);
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+}
+
 .pet-card {
   border: 1px solid var(--border-light);
   border-radius: 12px;
@@ -1005,28 +1207,6 @@ export default {
   border-color: var(--primary-pink);
 }
 
-.favorite-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3;
-  transition: all 0.3s ease;
-  color: #dc3545;
-}
-
-.favorite-btn:hover {
-  background: white;
-  transform: scale(1.1);
-}
-
 .adoption-badge {
   position: absolute;
   top: 12px;
@@ -1039,20 +1219,6 @@ export default {
   font-weight: 600;
   z-index: 3;
   backdrop-filter: blur(10px);
-}
-
-.compatibility-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  z-index: 3;
-  border: 1px solid var(--border-light);
-  color: var(--text-dark);
 }
 
 .api-badge {
@@ -1112,11 +1278,27 @@ export default {
   opacity: 1;
 }
 
-.compatibility-meter {
-  background: var(--background-light);
-  padding: 0.75rem;
-  border-radius: 8px;
-  border-left: 3px solid var(--primary-pink);
+/* Favorite Button - bottom right */
+.favorite-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  transition: all 0.3s ease;
+  color: #dc3545;
+}
+
+.favorite-btn:hover {
+  background: white;
+  transform: scale(1.1);
 }
 
 .view-more-btn {
@@ -1169,6 +1351,54 @@ export default {
   }
 }
 
+/* Application Card */
+.application-card {
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-light);
+}
+
+.application-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.pending-application {
+  border-left: 4px solid #ffc107;
+}
+
+.pending-application:hover {
+  border-left-color: #ff9800;
+}
+
+.rejected-application {
+  border-left: 4px solid #dc3545;
+  background-color: #fff5f5;
+}
+
+.rejected-application:hover {
+  border-left-color: #c82333;
+  background-color: #ffe6e6;
+}
+
+/* Quiz Results Styles */
+.quiz-results {
+  background: #f8f9fa;
+  border-radius: 15px;
+  padding: 2rem;
+}
+
+.list-group-item {
+  border: none;
+  border-bottom: 1px solid #dee2e6;
+  padding: 1rem 1.25rem;
+}
+
+.list-group-item:last-child {
+  border-bottom: none;
+}
+
 @media (max-width: 768px) {
   .profile-sidebar {
     position: static;
@@ -1176,7 +1406,30 @@ export default {
   }
 
   .profile-stats {
-    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .stat-item {
+    padding: 0.75rem 0.5rem !important;
+  }
+
+  .stat-number {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-stats {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .stat-item {
+    flex: 1 1 calc(50% - 0.75rem);
   }
 }
 </style>
