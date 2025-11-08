@@ -82,6 +82,19 @@ def compress_image(image_data, max_size=(1200, 1200), quality=85):
         print(f"Image compression error: {e}")
         return image_data  # Return original if compression fails
 
+@app.route('/')
+def root():
+    return jsonify({
+        "message": "Pawfect Match Backend API",
+        "status": "online",
+        "endpoints": {
+            "health": "/api/health",
+            "pets": "/api/pets",
+            "dog_breeds": "/api/external/dog-breeds",
+            "cat_breeds": "/api/external/cat-breeds"
+        }
+    })
+
 # AUTH ROUTES
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
