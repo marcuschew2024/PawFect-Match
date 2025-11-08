@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
 
 # CORS configuration
-CORS(app)
+CORS(app, origins=["*"])  
 
 # Supabase configuration
 supabase_url = os.getenv('SUPABASE_URL')
