@@ -22,6 +22,22 @@
     ],
     "rewrites": [
       {
+        "source": "/api/external/dog-breeds",
+        "function": "getDogBreeds"
+      },
+      {
+        "source": "/api/external/cat-breeds",
+        "function": "getCatBreeds"
+      },
+      {
+        "source": "/api/external/dog-images",
+        "function": "getDogImages"
+      },
+      {
+        "source": "/api/external/cat-images",
+        "function": "getCatImages"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
